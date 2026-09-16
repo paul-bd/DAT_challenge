@@ -1,0 +1,77 @@
+{
+  "name": "fusion10",
+  "board_log_loss": 0.2313,
+  "oof_log_loss_auc": "0.2023 / 0.9759",
+  "members": [
+    {
+      "member": "fu_a1_dnet",
+      "seed": 1,
+      "splits": "meta/cv_round2.csv"
+    },
+    {
+      "member": "fu_a2_dnet",
+      "seed": 2,
+      "splits": "meta/cv_round3.csv"
+    },
+    {
+      "member": "fu_a3_dnet",
+      "seed": 3,
+      "splits": "meta/cv_round4.csv"
+    },
+    {
+      "member": "fu_a4_dnet",
+      "seed": 4,
+      "splits": "meta/cv_round5.csv"
+    },
+    {
+      "member": "fu_a5_dnet",
+      "seed": 5,
+      "splits": "meta/cv_round6.csv"
+    },
+    {
+      "member": "fu_a6_dnet",
+      "seed": 6,
+      "splits": "meta/cv_round7.csv"
+    },
+    {
+      "member": "fu_a7_dnet",
+      "seed": 7,
+      "splits": "meta/cv_round8.csv"
+    },
+    {
+      "member": "fu_a8_dnet",
+      "seed": 8,
+      "splits": "meta/cv_round9.csv"
+    },
+    {
+      "member": "fu_a9_dnet",
+      "seed": 9,
+      "splits": "meta/cv_round10.csv"
+    },
+    {
+      "member": "fu_a10_dnet",
+      "seed": 10,
+      "splits": "meta/cv_round11.csv"
+    }
+  ],
+  "shared_recipe": {
+    "rot_deg": 31.7,
+    "sagfuse": "attnres",
+    "sagfuse_aug": true,
+    "sagfuse_aux": 0.3,
+    "anchor_guard": true,
+    "ndt_anchor": "striatal",
+    "mask3d_cache": "/ssd/datasets/DAT_SCAN/boxcache/canonv2mask_ell.u8.npy",
+    "lesion_p": 0.25,
+    "lesion_lo": 0.45,
+    "lesion_hi": 0.9,
+    "fuse_lr_mult": 0.3,
+    "box_cache": "/ssd/datasets/DAT_SCAN/boxcache/canonv2.f16.npy"
+  },
+  "calibration": {
+    "slope": 0.85,
+    "member_logit_cap": 6.0,
+    "intercept": "refit on this roster's own OOF"
+  },
+  "checkpoint_rule": "best (lowest val log loss), NOT the EMA/swa artifact"
+}

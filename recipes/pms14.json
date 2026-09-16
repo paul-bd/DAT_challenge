@@ -1,0 +1,101 @@
+{
+  "name": "pms14",
+  "board_log_loss": 0.2353,
+  "oof_log_loss_auc": "0.2016 / 0.9761",
+  "members": [
+    {
+      "member": "w01",
+      "seed": 1,
+      "splits": "meta/cv_round2.csv"
+    },
+    {
+      "member": "w02",
+      "seed": 2,
+      "splits": "meta/cv_round3.csv"
+    },
+    {
+      "member": "w03",
+      "seed": 3,
+      "splits": "meta/cv_round4.csv"
+    },
+    {
+      "member": "w04",
+      "seed": 4,
+      "splits": "meta/cv_round5.csv"
+    },
+    {
+      "member": "w05",
+      "seed": 5,
+      "splits": "meta/cv_round6.csv"
+    },
+    {
+      "member": "w06",
+      "seed": 6,
+      "splits": "meta/cv_round7.csv"
+    },
+    {
+      "member": "w07",
+      "seed": 7,
+      "splits": "meta/cv_round8.csv"
+    },
+    {
+      "member": "w08",
+      "seed": 8,
+      "splits": "meta/cv_round9.csv"
+    },
+    {
+      "member": "w09",
+      "seed": 9,
+      "splits": "meta/cv_round10.csv"
+    },
+    {
+      "member": "w10",
+      "seed": 10,
+      "splits": "meta/cv_round11.csv"
+    },
+    {
+      "member": "w11",
+      "seed": 11,
+      "splits": "meta/cv_round12.csv"
+    },
+    {
+      "member": "w12",
+      "seed": 12,
+      "splits": "meta/cv_round13.csv"
+    },
+    {
+      "member": "w13",
+      "seed": 13,
+      "splits": "meta/cv_round14.csv"
+    },
+    {
+      "member": "w14",
+      "seed": 14,
+      "splits": "meta/cv_round15.csv"
+    }
+  ],
+  "shared_recipe": {
+    "premask_jitter": 4,
+    "premask_band": 26,
+    "sagfuse_premask": true,
+    "rot_deg": 31.7,
+    "sagfuse": "attnres",
+    "sagfuse_aug": true,
+    "sagfuse_aux": 0.3,
+    "anchor_guard": true,
+    "ndt_anchor": "striatal",
+    "mask3d_cache": "/ssd/datasets/DAT_SCAN/boxcache/canonv2mask_ell.u8.npy",
+    "lesion_p": 0.25,
+    "lesion_lo": 0.45,
+    "lesion_hi": 0.9,
+    "lesion_pre_geom": true,
+    "fuse_lr_mult": 0.3,
+    "box_cache": "/ssd/datasets/DAT_SCAN/boxcache/canonv2.f16.npy"
+  },
+  "calibration": {
+    "slope": 0.85,
+    "member_logit_cap": 6.0,
+    "intercept": "refit on this roster's own OOF"
+  },
+  "checkpoint_rule": "best (lowest val log loss), NOT the EMA/swa artifact"
+}
