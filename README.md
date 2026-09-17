@@ -440,6 +440,17 @@ no model output, shuffled order, confident normals mixed in as controls.
   normal, the reader called abnormal in 17 of 40.
 - Re-shown the same 14 scans weeks later, the same reader changed their own answer on **4 of 14**.
 
+This is what those discordant annotations look like:
+
+![The most discordant scans](docs/figures/discordant.png)
+
+*The scans where the stored label and the model disagree most confidently, chosen by the winning
+roster's own out-of-fold prediction. The top two rows are labelled **abnormal** yet read as
+confidently normal — two symmetric commas, putaminal tails present. The bottom two are labelled
+**normal** yet read as confidently abnormal — dot-shaped or clearly asymmetric uptake. Scans like
+these are exactly what the blinded re-reads above were run on, and they are why the reader sided
+with the model more often than with the label.*
+
 None of this is a random sample — these are the scans the model found hardest, so the rates describe
 the difficult tail, not the dataset. But the loss is concentrated in exactly that tail: 115 of 1,362
 scans are misclassified and carry 57% of the total loss, and about 3% of scans carry a fifth of it.

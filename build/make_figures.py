@@ -11,6 +11,8 @@ Produces:
                       with the signs a reader looks for annotated
   lesion.png          counterfactual lesion synthesis on a real normal scan at rising severity,
                       with the model's own read of each synthetic scan underneath
+  discordant.png      the most discordant scans: stored abnormal read as confidently normal by the
+                      model, and stored normal read as confidently abnormal
 
 Example scans are chosen by the winning roster's own out-of-fold logit, so they are representative of
 what the model is confident about rather than cherry-picked by eye. Their uids are printed and written
@@ -34,6 +36,11 @@ from datscan.config import Recipe                        # noqa: E402
 from datscan.projection import PhysShape3N               # noqa: E402
 
 torch.set_grad_enabled(False)
+torch._C._jit_set_profiling_executor(False)      # ~110 s per distinct batch shape otherwise
+torch._C._jit_set_profiling_mode(False)
+torch._C._jit_override_can_fuse_on_cpu(False)    # the fuser crashes the fusion trace (as in main.py)
+torch._C._jit_override_can_fuse_on_gpu(False)
+torch._C._jit_set_texpr_fuser_enabled(False)
 SPACING = 2.0
 CH = ["peak", "mean", "aniso x uptake", "NDT"]
 FG, BG, GRID = "#e8e8ea", "#131316", "#2a2a30"
@@ -126,16 +133,64 @@ def project(comp, cmask, idx, net):
 
 
 def build_net(runs, member):
-    """The real trained model for the figure, so the captured tensors are the shipped ones."""
+    """The real trained model for the figure, so the captured tensors are the shipped ones.
+
+    If the run directory is gone (it was archived after the competition), the net is built from the
+    pinned recipe with random weights. That is still exact for every figure that only renders the
+    PROJECTION outputs -- PhysShape3N holds zero learnable parameters -- but the model's own reads
+    (fig_lesion) need the checkpoint and are skipped without it.
+    """
     import json
     from datscan.model import DatNet
-    rec = json.load(open(f"{runs}/{member}.manifest.json"))["recipe"]
+    mf = f"{runs}/{member}.manifest.json"
+    if os.path.exists(mf):
+        rec = json.load(open(mf))["recipe"]
+    else:
+        rec = json.load(open(os.path.join(ROOT, "recipes", "fusion10_s078.json")))["shared_recipe"]
     r = Recipe(**{k: v for k, v in rec.items() if k in Recipe.__dataclass_fields__})
     net = DatNet(r).eval()
     ck = f"{runs}/{member}__best_fold0.pt"
-    if os.path.exists(ck):
+    trained = os.path.exists(ck)
+    if trained:
         net.load_state_dict(torch.load(ck, map_location="cpu"))
-    return net
+    return net, trained
+
+
+def oof_from_traces(assets, comp, cmask, uids):
+    """The winning roster's out-of-fold ensemble logit, recomputed from the shipped TorchScript traces.
+
+    Fallback for when the run directory's `__best_oof_p_fold*.npy` dumps are gone: each member's split
+    is pinned in meta/cv_round{2..11}.csv, so for every scan the fold-model that never trained on it is
+    known, and the trace forward was verified equal to the dumped OOF at export time (T4). Same
+    flip-TTA, per-member +-6 cap and mean over members as the shipped inference.
+    """
+    dev = "cuda" if torch.cuda.is_available() else "cpu"
+    u2i = {u: i for i, u in enumerate(uids)}
+    zs = []
+    for m in range(1, 11):
+        sp = pd.read_csv(os.path.join(ROOT, "meta", f"cv_round{m + 1}.csv"))
+        z = np.full(len(uids), np.nan, np.float32)
+        for f in range(5):
+            net = torch.jit.load(f"{assets}/fu_a{m}_dnet_f{f}.ts.pt", map_location=dev).eval()
+            if dev == "cpu":
+                net = net.float()
+            dt = next(net.parameters()).dtype
+            vidx = [u2i[u] for u in sp.loc[sp["fold"] == f, "uid"].astype(str)]
+            for k in range(0, len(vidx), 16):
+                b = vidx[k:k + 16]
+                pad = len(b) == 1                              # batch-1 guard, as in the shipped main.py
+                bb = b * 2 if pad else b
+                x = torch.from_numpy(np.asarray(comp[bb], np.float32))[:, None].to(dev)
+                m3 = torch.from_numpy(np.asarray(cmask[bb], np.float32))[:, None].to(dev)
+                an = CZ.with_slabs(m3)
+                with torch.no_grad():
+                    z1 = net(x.to(dt), an.to(dt)).float()
+                    z2 = net(torch.flip(x, dims=[2]).to(dt), torch.flip(an, dims=[2]).to(dt)).float()
+                z[b] = ((z1 + z2) / 2).view(-1).cpu().numpy()[:len(b)]
+        assert not np.isnan(z).any(), f"member {m}: splits do not cover every scan"
+        zs.append(np.clip(z, -6, 6))
+        print(f"  oof_from_traces: member fu_a{m}_dnet done", flush=True)
+    return np.mean(zs, 0)
 
 
 def fig_inputs(cases, comp, cmask, net, out):
@@ -229,6 +284,36 @@ def fig_lesion(case, comp, cmask, net, out, sevs=(0.0, 0.30, 0.45, 0.60, 0.90)):
     print(f"wrote {out}")
 
 
+def fig_discordant(cases, comp, cmask, net, out):
+    """The most discordant scans: stored label vs the model's confident opposite read.
+
+    These are the scans the ceiling section of the README is about — the confident errors, chosen by
+    the winning roster's own out-of-fold prediction, not by eye. On the 14 most confident of them the
+    blinded re-reader sided with the model 9 times.
+    """
+    fig, axes = plt.subplots(len(cases), 5, figsize=(14, 2.8 * len(cases)), facecolor=BG)
+    for r, (idx, uid, lab, p) in enumerate(cases):
+        raw = np.asarray(comp[idx], np.float32)
+        axes[r, 0].imshow(mip(raw), cmap="magma")
+        style(axes[r, 0], "canonical box (S-I MIP)" if r == 0 else None)
+        axes[r, 0].set_ylabel(f"label: {lab}\nmodel: p = {p:.3f}\n{uid}", color=FG, fontsize=8,
+                              rotation=0, ha="right", va="center", labelpad=44)
+        z_ax, _ = project(comp, cmask, idx, net)
+        for c in range(4):
+            ax = axes[r, c + 1]; ax.imshow(np.rot90(z_ax[c]), cmap="magma")
+            style(ax, CH[c] if r == 0 else None, fs=9)
+    fig.text(0.5, -0.02,
+             "Top rows: labelled ABNORMAL, read by the model as confidently normal — symmetric commas, "
+             "tails present.\nBottom rows: labelled NORMAL, read as confidently abnormal — dot-shaped "
+             "or asymmetric uptake.\nSelected by the winning roster's own out-of-fold prediction; "
+             "p is the calibrated ensemble output (threshold 0.5).",
+             color="#9a9aa4", fontsize=8.5, ha="center")
+    fig.suptitle("Discordant annotations — the stored label and the model disagree, confidently",
+                 color=FG, fontsize=12, y=1.0)
+    fig.tight_layout(); fig.savefig(out, dpi=140, bbox_inches="tight", facecolor=BG); plt.close(fig)
+    print(f"wrote {out}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=os.path.join(ROOT, "docs", "figures"))
@@ -237,6 +322,8 @@ def main():
     ap.add_argument("--mask-cache", default="/ssd/datasets/DAT_SCAN/boxcache/canonv2mask_ell.u8.npy")
     ap.add_argument("--runs", default="/ssd/datasets/DAT_SCAN/runs_fusion150")
     ap.add_argument("--member", default="fu_a1_dnet", help="member whose trained net supplies the views")
+    ap.add_argument("--traces", default="/ssd/datasets/DAT_SCAN/winner_assets",
+                    help="dir with the shipped fu_a*_dnet_f*.ts.pt traces (OOF fallback when --runs is gone)")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
 
@@ -245,15 +332,20 @@ def main():
     uids = pd.read_csv(os.path.join(ROOT, "meta", "uids.csv"))["uid"].astype(str).values
 
     # example scans chosen by the winning roster's own OOF logit
-    zs = []
-    for i in range(1, 11):
-        m = f"fu_a{i}_dnet"; z = np.full(len(y), np.nan)
-        for f in range(5):
-            idx = np.load(f"{a.runs}/{m}__best_oof_idx_fold{f}.npy")
-            p = np.clip(np.load(f"{a.runs}/{m}__best_oof_p_fold{f}.npy"), 1e-6, 1 - 1e-6)
-            z[idx] = np.log(p / (1 - p))
-        zs.append(np.clip(z, -6, 6))
-    zm = np.mean(zs, 0); pr = 1 / (1 + np.exp(-(0.78 * zm - 0.147824566)))
+    if os.path.exists(f"{a.runs}/fu_a1_dnet__best_oof_idx_fold0.npy"):
+        zs = []
+        for i in range(1, 11):
+            m = f"fu_a{i}_dnet"; z = np.full(len(y), np.nan)
+            for f in range(5):
+                idx = np.load(f"{a.runs}/{m}__best_oof_idx_fold{f}.npy")
+                p = np.clip(np.load(f"{a.runs}/{m}__best_oof_p_fold{f}.npy"), 1e-6, 1 - 1e-6)
+                z[idx] = np.log(p / (1 - p))
+            zs.append(np.clip(z, -6, 6))
+        zm = np.mean(zs, 0)
+    else:
+        print(f"run dumps not found under {a.runs} -> recomputing OOF from the shipped traces")
+        zm = oof_from_traces(a.traces, comp, cmask, uids)
+    pr = 1 / (1 + np.exp(-(0.78 * zm - 0.147824566)))
     nor = np.where(y == 0)[0]; abn = np.where(y == 1)[0]
     i_n = int(nor[np.argmin(zm[nor])]); i_a = int(abn[np.argmax(zm[abn])])
     i_m = int(abn[np.argsort(np.abs(zm[abn] - 1.0))[0]])
@@ -262,12 +354,23 @@ def main():
              (i_m, uids[i_m], "ABNORMAL (mild)", pr[i_m])]
     print("examples:", [(c[1], c[2], round(float(c[3]), 3)) for c in cases])
 
-    net = build_net(a.runs, a.member)
-    print(f"figures rendered from the REAL model: {a.member} fold0 ({a.runs})")
+    # discordant: worst false negatives (stored abnormal, lowest p) and false positives (the reverse)
+    fn = [int(i) for i in abn[np.argsort(pr[abn])][:2]]
+    fp = [int(i) for i in nor[np.argsort(-pr[nor])][:2]]
+    disc = [(i, uids[i], "ABNORMAL", pr[i]) for i in fn] + \
+           [(i, uids[i], "NORMAL", pr[i]) for i in fp]
+    print("discordant:", [(c[1], c[2], round(float(c[3]), 3)) for c in disc])
+
+    net, trained = build_net(a.runs, a.member)
+    print(f"views rendered from {a.member} ({'trained checkpoint' if trained else 'recipe, random weights -- projections are weight-free'})")
     fig_preprocessing(uids[i_a], a.niftis, comp, cmask, i_a, f"{a.out}/preprocessing.png")
     fig_inputs(cases, comp, cmask, net, f"{a.out}/inputs.png")
     fig_channels(cases, comp, cmask, net, f"{a.out}/channels.png")
-    fig_lesion(cases[0], comp, cmask, net, f"{a.out}/lesion.png")
+    if trained:
+        fig_lesion(cases[0], comp, cmask, net, f"{a.out}/lesion.png")
+    else:
+        print("skip lesion.png: needs the trained checkpoint (its bottom row is the model's own read)")
+    fig_discordant(disc, comp, cmask, net, f"{a.out}/discordant.png")
 
 
 if __name__ == "__main__":
