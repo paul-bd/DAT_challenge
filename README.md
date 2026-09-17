@@ -113,6 +113,107 @@ and it is scans like this that carry most of the loss.*
 
 ---
 
+## Training-time augmentation
+
+Two things happen to a scan before the network sees it: a chain of four physical corruptions, and — for
+a quarter of the normal scans — a synthetic lesion that turns it into a training example of early
+disease. Neither runs at inference.
+
+### Counterfactual lesion synthesis
+
+The model's errors were never spread evenly. They concentrate in the **mild band**, where a striatum is
+only partly denervated, and that band is thin in the training data. Capacity, architecture and member
+count were all closed axes by then. What was missing was examples.
+
+Competition rules banned external DaT data, so the only compliant source of more mild examples was our
+own normal scans. In early Parkinson's the loss of dopaminergic terminals is (a) posterior putamen
+first, spreading anteriorly, (b) putamen before caudate, and (c) asymmetric. `datscan/lesion.py`
+reproduces exactly that, as a multiplicative reduction of the **specific binding only**:
+
+```
+out = x − (x − 1) · (1 − f)          f = the lesion field, 1 outside the striatum
+```
+
+The box is whole-brain-mean normalised, so `x − 1` is the binding above the non-displaceable level.
+Background, skull and the salivary glands are left untouched, exactly as a loss of transporters would
+leave them. Inside the striatal mask the reduction is graded along the antero-posterior axis,
+normalised by *each mask's own extent* so the lesion covers the same anatomy on a small striatum as on
+a large one, with an independent severity per side.
+
+![Lesion synthesis at rising severity](docs/figures/lesion.png)
+
+*One real normal scan, progressively denervated, with the winning model's own read of each synthetic
+scan underneath. The commas shorten, the tails go, the shape becomes a dot.*
+
+**The blur is the load-bearing part.** The field is smoothed at the scanner's own resolution, 9 mm full
+width at half maximum, about 1.9 voxels of sigma at 2 mm. A synthetic scan therefore carries no edge
+sharper than the camera could produce. Skipping this was tested: a variant that clipped peaks without
+the point-spread blur cost 0.017 to 0.022 log loss at every smoothing level, because a sharp lesion is
+a trivially detectable artefact rather than a mild patient. This is the third independent result in
+this project pointing the same way — consistency with the imaging physics is what makes synthetic data
+usable.
+
+A second trap, found by audit rather than by any curve: the lesioned volume must be put back on **the
+source scan's** intensity scale, not renormalised to 1.0. Forcing the output to a reference of 1.0 left
+real boxes at 1.0168 ± 0.0150 and synthetic ones at 1.0006 ± 0.0019 — a mean offset and an eight-times
+tighter spread, which is an almost free "is this synthetic" cue on a single scalar. `renormalise()`
+takes the source reference as an argument for this reason.
+
+The shipped settings, in `recipes/fusion10_s078.json`:
+
+| parameter | value | meaning |
+|---|---|---|
+| `lesion_p` | 0.25 | fraction of **normal** scans replaced by a lesioned copy, relabelled abnormal |
+| `lesion_lo`, `lesion_hi` | 0.45, 0.90 | severity drawn uniformly in this range |
+| `lesion_asym` | 0.6 | weaker side gets severity × U(0.6, 1) |
+| `lesion_base` | 0.25 | fraction of the severity applied to the whole striatum, so the caudate keeps most of its binding |
+| `lesion_psf` | 1.9 | blur sigma in voxels — the camera's own resolution |
+
+Be honest about the label at the bottom of that range. At severity 0.60 the model calls 89% of lesioned
+normals abnormal, so the label is fair. At 0.45, as the figure shows, it reads 0.214 — below the
+decision threshold. Those samples are deliberately ambiguous, which is the entire point, but they do
+inject some label noise in exchange for populating the mild band. Widening the range further was tested
+and lost: a 0.35–0.90 superset cost 0.0027 on both seeds.
+
+Several variants of this were tried and rejected; the table at the end of `notes/REFUTED.md` has all of
+them. Briefly: rim-first thinning was the best of them at 0.0008, four times under the bar; applying
+the lesion before the geometric transform was neutral at 0.0002 for the winning model, and is only
+switched on in `pms14` where the premask construction requires it; and a diversified-field variant aimed
+at the synthetic-versus-real template signature made the signature genuinely weaker, from 0.91 to 0.84
+by probe, while being null to negative on the actual task.
+
+### The corruption chain
+
+Four operations, applied in a fixed order because the order determines the random-number stream:
+
+| op | probability | what it does |
+|---|---|---|
+| `RandFlipLR` | 0.5 | left-right flip — **the only label-preserving flip**, since the axes are L-R, A-P, S-I |
+| `RandAffine3D` | always | rotation ±31.7°, anisotropic zoom 0.15, translation 0.06 |
+| `RandPoissonCounts` | 0.3 | resample at an effective count level of 25–175, then rescale — the physically correct noise model for the modality, whose acquisition varies fivefold in signal-to-noise across the ten centres |
+| `RandGammaGain` | 0.3 | `(x/12)^g · 12`, `g ~ U(0.7, 1.3)` |
+
+**Every one of these was removed singly, and every removal lost.** The chain is a verified local
+optimum. Two are worth explaining, because both look like defects:
+
+`RandGammaGain` is not a contrast change. On mean-normalised input it is a **global gain of 0.46× to
+2.3×**, which randomises the absolute level of the peak and mean channels that inference always sees at
+exactly 1.0×. Removing it costs 0.0118 across three seeds. The network needs to be gain-invariant and
+this is what teaches it.
+
+The consequence is a rule with teeth: **any threshold computed on the raw volume must be relative, never
+absolute.** A level computed on the clean image is wrong by up to 2.3× on a third of batches and exactly
+right at validation time. Every 3D channel that has failed in this project binarised the volume first,
+and under Poisson resampling that mask jitters batch to batch. Smooth reductions survive; thresholds do
+not.
+
+`RandPoissonCounts` is the subtler one. Removing it **wins** 0.0073 in distribution across six of six
+runs, and loses 0.0062 ± 0.0020 when validated on a held-out acquisition cluster. It is load-bearing for
+transfer and invisible without an out-of-distribution read. That pattern — a clean in-distribution win
+from an augmentation removal — showed up three separate times here and was wrong every time.
+
+---
+
 ## The model that won
 
 **`recipes/fusion10_s078.json`** — 10 members × 5 folds, calibrated at slope **0.78**.
@@ -298,7 +399,8 @@ each one cost. The live flags are the ones named in `recipes/*.json`.
   three winners.
 - Any in-distribution gain of roughly 0.007 to 0.010 from changing the training distribution is the
   signature of fitting the acquisition mix harder, not of a better model. Three separate arms passed a
-  clean leak-free screen and then failed out-of-cluster validation.
+  clean leak-free screen and then failed out-of-cluster validation — see the Poisson case under
+  [the corruption chain](#the-corruption-chain).
 - Never select members, folds, or checkpoints on out-of-fold predictions. Selection inflation runs
   0.011 to 0.045 log loss and is family-dependent. Anything derived from out-of-fold predictions leaks
   about 0.018 AUC and needs nested validation.

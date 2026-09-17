@@ -9,6 +9,8 @@ Produces:
                       channels, for a confident normal, a confident abnormal, and a mild abnormal
   channels.png        the 4 axial channels side by side for one normal / abnormal pair, larger,
                       with the signs a reader looks for annotated
+  lesion.png          counterfactual lesion synthesis on a real normal scan at rising severity,
+                      with the model's own read of each synthetic scan underneath
 
 Example scans are chosen by the winning roster's own out-of-fold logit, so they are representative of
 what the model is confident about rather than cherry-picked by eye. Their uids are printed and written
@@ -179,6 +181,54 @@ def fig_channels(cases, comp, cmask, net, out):
     print(f"wrote {out}")
 
 
+def fig_lesion(case, comp, cmask, net, out, sevs=(0.0, 0.30, 0.45, 0.60, 0.90)):
+    """Counterfactual lesion synthesis, applied to a real NORMAL scan at rising severity.
+
+    The bottom row is the model's own read of each synthetic scan. That is the check that matters: the
+    training loop relabels these as abnormal, so if the model did not find them abnormal the label
+    would be a lie and the augmentation would be teaching noise.
+    """
+    from datscan.lesion import apply_lesion
+    idx, uid, lab, _ = case
+    x0 = torch.from_numpy(np.asarray(comp[idx], np.float32))[None, None]
+    m3 = torch.from_numpy(np.asarray(cmask[idx], np.float32))[None, None]
+    fig, axes = plt.subplots(2, len(sevs), figsize=(3.0 * len(sevs), 6.4), facecolor=BG,
+                             gridspec_kw={"height_ratios": [3, 1]})
+    for c, s in enumerate(sevs):
+        if s == 0:
+            xl = x0
+        else:
+            w = s * 0.6 + 0.4 * s * float(np.random.default_rng(c).random())   # asymmetric weaker side
+            xl = apply_lesion(x0, m3, torch.tensor([s]), torch.tensor([w]), base=0.25, psf_sigma=1.9)
+        z_ax, _ = project(comp, cmask, idx, net) if s == 0 else (None, None)
+        with torch.no_grad():
+            z = float(net(xl, CZ.with_slabs(m3)).squeeze())
+        p = 1 / (1 + np.exp(-(0.78 * np.clip(z, -6, 6) - 0.147824566)))
+        ax = axes[0, c]; ax.imshow(mip(xl[0, 0].numpy()), cmap="magma")
+        style(ax, ("original NORMAL scan" if s == 0 else f"severity {s:.2f}"), fs=10)
+        b = axes[1, c]
+        b.set_facecolor(BG)
+        b.barh([0], [p], color="#ef5350" if p > 0.5 else "#4dd0e1", height=0.5)
+        b.set_xlim(0, 1); b.set_ylim(-0.6, 0.6); b.set_yticks([])
+        b.set_xticks([0, 0.5, 1]); b.tick_params(colors="#9a9aa4", labelsize=8)
+        b.axvline(0.5, color="#6a6a74", lw=0.8, ls="--")
+        for sp in b.spines.values():
+            sp.set_color(GRID)
+        b.set_title(f"model: p(abnormal) = {p:.3f}", color=FG, fontsize=9, pad=4)
+    fig.suptitle(f"Counterfactual lesion synthesis — one real normal scan ({uid}), progressively denervated",
+                 color=FG, fontsize=12, y=0.99)
+    fig.text(0.5, 0.005,
+             "Only the SPECIFIC binding (x - 1) is reduced: background, skull and salivary glands are "
+             "untouched, as a loss of dopamine transporters would leave them.\n"
+             "The loss is graded posterior-to-anterior, independently severe per side, and the field is "
+             "blurred at the scanner's own 9 mm resolution so no edge is sharper than the camera can "
+             "produce.\nThe shipped recipe draws severity from U(0.45, 0.90) on 25% of normal scans.",
+             color="#9a9aa4", fontsize=8.5, ha="center")
+    fig.tight_layout(rect=(0, 0.06, 1, 0.97))
+    fig.savefig(out, dpi=135, bbox_inches="tight", facecolor=BG); plt.close(fig)
+    print(f"wrote {out}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=os.path.join(ROOT, "docs", "figures"))
@@ -217,6 +267,7 @@ def main():
     fig_preprocessing(uids[i_a], a.niftis, comp, cmask, i_a, f"{a.out}/preprocessing.png")
     fig_inputs(cases, comp, cmask, net, f"{a.out}/inputs.png")
     fig_channels(cases, comp, cmask, net, f"{a.out}/channels.png")
+    fig_lesion(cases[0], comp, cmask, net, f"{a.out}/lesion.png")
 
 
 if __name__ == "__main__":
