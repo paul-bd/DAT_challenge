@@ -1,6 +1,6 @@
 {
-  "name": "fusion10",
-  "board_log_loss": 0.2313,
+  "name": "fusion10_s078",
+  "board_log_loss": 0.2317,
   "oof_log_loss_auc": "0.2023 / 0.9759",
   "members": [
     {
@@ -69,10 +69,15 @@
     "box_cache": "/ssd/datasets/DAT_SCAN/boxcache/canonv2.f16.npy"
   },
   "calibration": {
-    "slope": 0.85,
+    "slope": 0.78,
+    "intercept": -0.147824566,
     "member_logit_cap": 6.0,
-    "intercept": "refit on this roster's own OOF"
+    "intercept_note": "refit on this roster's own OOF at the fixed slope; reproduced by build/calibrate.py to 1.9e-08"
   },
   "checkpoint_rule": "best (lowest val log loss), NOT the EMA/swa artifact",
-  "private_log_loss": 0.2754
+  "private_log_loss": 0.2732,
+  "private_auc": 0.9489,
+  "private_rank": "6 of ~250",
+  "public_log_loss": 0.2317,
+  "note": "THE WINNING CONFIGURATION. Identical members and weights to fusion10 -- verified: the two shipped zips contain the same 50 traces. The ONLY difference is the calibration slope, 0.78 instead of 0.85, with the intercept refit on the same OOF. It scored 0.0004 WORSE than fusion10 in public and 0.0022 BETTER in private."
 }

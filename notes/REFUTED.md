@@ -1031,3 +1031,87 @@ off the exact function the board rewarded. The champion's score is not a sample 
 OOF can see; it is a fixed point we can only move AWAY from. Corollary for any future competition of
 this shape: once a package scores well, roster growth in the same family is NOT conservative.
 Final public standing: #7, 0.2313/0.9632. Leader 0.2154/0.9721, 3rd 0.2263/0.9645.
+
+## COMPETITOR EVIDENCE 2026-09-17 — a rank-14 solution reports gains on TWO axes we closed
+`github.com/ahammadshawki8/dat-parkinsons-challenge`, published 23:53 UTC on the close. UNTRUSTED,
+self-reported, never reproduced here — recorded because it bears directly on two of our verdicts.
+Claims: "Best public log loss 0.2356 (AUROC 0.9649)", "#14 at the close". Note the shape: AUC 0.9649
+is ABOVE our 0.9632 at a WORSE log loss than our 0.2313 — the mirror image of our position (we
+calibrate better, they discriminate better). Consistent with the board pattern we already saw at venkt
+(0.9703 AUC / 0.2340 ll): on this task AUC and ll rank teams differently.
+Their pipeline, and where it contradicts us:
+ 1. **9-parameter affine registration to a SYMMETRIC TEMPLATE built from normal training scans**, then
+    caudate / anterior-putamen / posterior-putamen binding ratios + shape on a template-derived atlas
+    (~173 L/R-invariant features), stacked with the CNNs by logistic regression on OOF logits. They
+    call registration + regional binding ratios "essential". OUR verdict was that hand-crafted
+    quantification is null vs the ensemble (122-var L1 0.957 vs CNN 0.976, every block null vs a
+    dimension-matched control, corr(quant, CNN) 0.9). POSSIBLE RECONCILIATION, not proven: our
+    features were measured in the canonical 8-DOF frame, and placement error — not partial volume —
+    is what capped our early regional features at ~0.60 AUC (see dat-shape-eccentricity). A 9-DOF
+    registration to a normal template is a STRONGER spatial normalisation than our frame, so their
+    regional ratios may be measuring what ours could not localise. Untested here.
+ 2. **Slice-sequence model: 9 thin slices through a shared effb0 -> BiGRU -> gated attention**, with a
+    "measurable gain". This is EXACTLY the architecture the user asked about on 09-15 ("2 axial
+    sagittal consecutives slices with for instance an LBGStM") and which I predicted would fail on the
+    basis of our slice/slab reader results (-0.017 AUC) and the closed alternative-readers axis. Our
+    readers were slice/slab CNNs and a coupled 3D<->2D model; we never built a recurrent sequence model
+    over slices with attention. **The prediction was not backed by a matched measurement and should
+    not have been stated as confidently as it was.**
+ 3. Also theirs: dual normalisation, strong blur/noise augmentation (agrees with our PSF/gamma
+    findings), bagging over fold splits. They REJECT 3D CNNs, MIL, rigid registration — all three
+    agree with our verdicts.
+Earlier the same day, `koneboi/dat-parkinsons` (13-member MIP + 3D CNN, per-member z-score + Platt,
+claims rank 28) — nothing new, and its self-reported "private" score cannot exist yet.
+
+## FINAL PRIVATE LEADERBOARD 2026-09-17 03:00 UTC — we finished #6, and the public top was destroyed
+The private board replaced the public one on the leaderboard page (same `leaderboard_partial` endpoint,
+250 rows). **paulonium: #6, private ll 0.2732 / AUC 0.9489** (from #7 public at 0.2313/0.9632).
+The private set is HARDER and NARROWER: winner 0.2532 vs 0.2154 public, top-10 AUC ~0.948-0.959 vs
+~0.963-0.972, and the #1-to-#10 spread is 0.0228 private vs 0.0159 public.
+
+| team | pub# | pub ll | priv# | priv ll | priv AUC | move |
+|---|---|---|---|---|---|---|
+| Marc-Dvci | 1 | 0.2154 | **28** | 0.2931 | 0.9444 | **-27** |
+| TheAvengers | 2 | 0.2249 | **1** | 0.2532 | 0.9590 | +1 |
+| South-Wing | 3 | 0.2263 | 17 | 0.2848 | 0.9455 | -14 |
+| ghost_sas | 4 | 0.2286 | 11 | 0.2763 | 0.9494 | -7 |
+| Shatatarka | 5 | 0.2308 | 7 | 0.2741 | 0.9488 | -2 |
+| Shivom | 6 | 0.2309 | 3 | 0.2708 | 0.9491 | +3 |
+| **paulonium** | **7** | **0.2313** | **6** | **0.2732** | **0.9489** | **+1** |
+| Tensla | 8 | 0.2320 | 9 | 0.2751 | 0.9480 | -1 |
+| AAF Team | 9 | 0.2338 | 8 | 0.2748 | 0.9510 | +1 |
+| venkt | 10 | 0.2340 | **38** | 0.2971 | 0.9466 | **-28** |
+| Suyash92 | 11 | 0.2348 | 4 | 0.2727 | 0.9488 | +7 |
+| Tigertech | 12 | 0.2363 | **2** | 0.2647 | 0.9522 | **+10** |
+
+**PER-SUBMISSION PRIVATE SCORES (the submissions page now shows both columns).** Our private best came
+from `fusion10 s0.78` (id-321607), NOT from the public best:
+| submission | public | private |
+|---|---|---|
+| fusion10 s0.78 | 0.2317 | **0.2732  <- our private best** |
+| fusion10 (the public PB) | 0.2313 | 0.2754 |
+| fusion26 | 0.2336 | 0.2771 |
+| anbfull | 0.2435 | 0.2814 |
+| pms14 | 0.2353 | 0.2838 |
+| mixed16 | 0.2414 | 0.2849 |
+| pmc10 | 0.2618 | 0.3001 |
+| gjsg | 0.2671 | 0.3164 |
+| pool150 | 0.2729 | 0.3148 |
+
+**Verdicts this settles.**
+1. **The slope bracket paid after all.** s078 scored +0.0004 WORSE in public and was written off on
+   2026-09-09 ("optimum near/above 0.85"); on private it is our BEST draw by 0.0022 over the public PB.
+   A flatter slope was the right call for the harder set, i.e. public-fitted temperature was slightly
+   overconfident. The bracket's value was insurance against exactly this, and the public read could not
+   see it. Never retire a calibration hedge on a single public delta.
+2. **Public ordering WAS largely noise, as the resampling estimate said.** sd of the ll gap between two
+   genuinely different models at n=1300 is ~0.009; the public top-12 was spread over 0.021. Marc-Dvci
+   -27 and venkt -28 are the predicted casualties; the +10 (Tigertech) and +7 (Suyash92) the mirror.
+   Our own move was +1 — the ONLY thing that protected us was not chasing the public board.
+3. **Best-of private scoring rewarded holding many near-core draws.** Nine scored packages = nine
+   private draws; the winner among them was the one we had already dismissed. This validates the
+   "many diverse robust packages" strategy in dat-private-split over tuning one.
+4. **pms14 was genuinely worse, on both splits** (public +0.0040, private +0.0106) — the rho predictor's
+   call stands and is now confirmed out-of-sample. Roster growth in the same family really does cost.
+5. Every package's private score is WORSE than its public score by 0.035-0.050, uniformly. The
+   population-transfer term we could never localise is real and roughly constant across recipes.

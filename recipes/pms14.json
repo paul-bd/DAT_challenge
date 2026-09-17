@@ -97,5 +97,6 @@
     "member_logit_cap": 6.0,
     "intercept": "refit on this roster's own OOF"
   },
-  "checkpoint_rule": "best (lowest val log loss), NOT the EMA/swa artifact"
+  "checkpoint_rule": "best (lowest val log loss), NOT the EMA/swa artifact",
+  "private_log_loss": 0.2838
 }
