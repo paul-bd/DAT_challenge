@@ -1,19 +1,29 @@
-# Reproduction run — first completed folds of the winning recipe (fusion10)
+# Reproduction run — full 50-fold retrain of the winning recipe (fusion10)
 # Date: 2026-09-24
 # Env: conda `training_new_dat` — Python 3.12, torch 2.10.0+cu128, exact requirements.txt pins.
 #   Gates passed before training: cache VERIFY n=12 corr 1.0000 PASS; tests/run_all.py GATE PASS
 #   (T2 40/40 seeds bit-identical, T3 max|dp| 0.000e+00 on shipped traces).
-# Hardware: 3x Tesla V100S-PCIE-32GB. ~58-62 min/fold.
+# Hardware: 3x Tesla V100S-PCIE-32GB, 9 trainers wide. ~58-62 min/fold.
 # Launcher: recipes/train_fusion10.sh, DAT_WORK=/ssd/datasets/DAT_SCAN
 #
-# NOTE on the comparison: the new files are f32 state-dict checkpoints
-# (`{member}__best_fold{f}.pt`); the shipped weights are f16 TorchScript traces
-# (`models/{member}_f{f}.ts.pt`). Different format, different training run —
-# md5 equality is not expected and does not hold. Both sets are recorded so the
-# retrained weights are pinned; functional equivalence of code vs shipped
-# traces is what T3 asserts (0.000e+00).
+# md5 equality with the shipped weights is not expected and does not hold:
+# new files are f32 state-dict checkpoints, shipped are f16 TorchScript traces,
+# and GPU training is not bit-deterministic (cuDNN benchmarking, atomic-add
+# ordering compounding over 120 epochs). Spot check on fu_a1 f0: conv weights
+# correlate 0.95-0.97 with the shipped trace. The functional reproduction is
+# what matches:
+#
+# CALIBRATION (build/calibrate.py on the retrained runs) vs the winning package:
+#   retrained: 10 members | OOF AUC 0.9760 | logit sd 4.044 | opt_temp 1.030
+#   OOF ll at shipped slope 0.78: 0.2065   (original package: 0.2067, opt_temp 1.036)
+#   -> reproduced within 0.0002 log loss.
 
 ## retrained checkpoints (/ssd/datasets/DAT_SCAN/runs_fusion10)
+1cb934b36af406f544794ed10bdacd9b  fu_a10_dnet__best_fold0.pt
+5f806dd93b905abe70abb967d93fd8f5  fu_a10_dnet__best_fold1.pt
+abfbcaa04e79159d08b8c509b6047547  fu_a10_dnet__best_fold2.pt
+db18f67adeea00fe016bff64dc0c6875  fu_a10_dnet__best_fold3.pt
+ebb4a7ccb6b04e78684e5c0758e95c42  fu_a10_dnet__best_fold4.pt
 0570c32bc3e88101367f7c2ffaa8e301  fu_a1_dnet__best_fold0.pt
 e08039d70bc5d4f767cb210690bb1dfa  fu_a1_dnet__best_fold1.pt
 7feb28f335be72298fd0f88bc3ac1c79  fu_a1_dnet__best_fold2.pt
@@ -21,8 +31,51 @@ e08039d70bc5d4f767cb210690bb1dfa  fu_a1_dnet__best_fold1.pt
 c00713cdaf5dd5f3ca14e9161abeed1e  fu_a1_dnet__best_fold4.pt
 e369f57ea0d579644f006f994dfcecb4  fu_a2_dnet__best_fold0.pt
 567d2c3c0f502bd63669764bc3862037  fu_a2_dnet__best_fold1.pt
+5ba72219ebdfffe0ad1085e974821499  fu_a2_dnet__best_fold2.pt
+2d4175879dae36cd921114f1d2ddfe6c  fu_a2_dnet__best_fold3.pt
+b2cdff739f84ca6bd4778b0e54914fec  fu_a2_dnet__best_fold4.pt
+92ec7a81751333fa3616f9f55b16733e  fu_a3_dnet__best_fold0.pt
+3b4446464486f07b2fc0d37a75a2ab2b  fu_a3_dnet__best_fold1.pt
+3b375fa3ea183b17f0fcc483169331cc  fu_a3_dnet__best_fold2.pt
+4e7bbeefbbf502539ee74a5ba90e21e9  fu_a3_dnet__best_fold3.pt
+bf003d5dbf9a8f00710ba2643906d76c  fu_a3_dnet__best_fold4.pt
+121d2a42dd24e70c77eeabca307f07ec  fu_a4_dnet__best_fold0.pt
+80c906d1a0a33323fd6010084bebfe7d  fu_a4_dnet__best_fold1.pt
+aaeb7a9f2895f7495220d51bc7f59e57  fu_a4_dnet__best_fold2.pt
+26fbf9d92c159604b218357b4f9105e7  fu_a4_dnet__best_fold3.pt
+6b6feff60737225324070cc32f08f83e  fu_a4_dnet__best_fold4.pt
+cc70cc72b20d7266ed234302f2433e38  fu_a5_dnet__best_fold0.pt
+954e8c965529f84bc38b8ca7e895d0f3  fu_a5_dnet__best_fold1.pt
+9a783fdcaee73512258134dfb6dc2be7  fu_a5_dnet__best_fold2.pt
+01f62feb87677a11950ea1b057c02f73  fu_a5_dnet__best_fold3.pt
+45d59e1dd365981d8040f3a06fa00ec8  fu_a5_dnet__best_fold4.pt
+33bb25e933dbf946c4fd2189c2df0fba  fu_a6_dnet__best_fold0.pt
+3e53743bda935cd8acdcb90aae2e152b  fu_a6_dnet__best_fold1.pt
+672e3395e8dea8efb64c5bab82ac5ac8  fu_a6_dnet__best_fold2.pt
+1569ab18162589ad31aa5d2b5112237a  fu_a6_dnet__best_fold3.pt
+dfae3c10cd60c028b672f1cfdd31637f  fu_a6_dnet__best_fold4.pt
+83635b270972917f0df0fc5a7e988b6e  fu_a7_dnet__best_fold0.pt
+230cad9874f07ebede40f555bf52ea90  fu_a7_dnet__best_fold1.pt
+0a99db7adbb7a7db1e66bd288db76842  fu_a7_dnet__best_fold2.pt
+e900f32785ba80bc5e0388eacd191344  fu_a7_dnet__best_fold3.pt
+26799d1b16d78633b98893df6adf9a1d  fu_a7_dnet__best_fold4.pt
+7077a1bfe49e771262329af3e3fdb039  fu_a8_dnet__best_fold0.pt
+183d34bb0900e158ec82087368f2c6e9  fu_a8_dnet__best_fold1.pt
+8f3032b6c56825451c8e472ba888c923  fu_a8_dnet__best_fold2.pt
+b66099a1c91bbb1455ebaea0825ee3c3  fu_a8_dnet__best_fold3.pt
+d96c7ef001b57ddbe1dea01288d80e07  fu_a8_dnet__best_fold4.pt
+d6c234b2a30b3bafbc0f39023fc473aa  fu_a9_dnet__best_fold0.pt
+87bd620e9c0334f1270c76c3df569cf4  fu_a9_dnet__best_fold1.pt
+0655339bea3b258408a44151fdd9edca  fu_a9_dnet__best_fold2.pt
+3f3d8c7be9c7d27785e0819e770b3671  fu_a9_dnet__best_fold3.pt
+51821e9f334e63e61d92ab0b3f3626b0  fu_a9_dnet__best_fold4.pt
 
-## shipped traces (models/), same members/folds
+## shipped traces (models/)
+d218627848addb48b00e6ac51790bb92  fu_a10_dnet_f0.ts.pt
+224f7335f96dd3f38df3be606ea280fb  fu_a10_dnet_f1.ts.pt
+c1edcea2ca642647b48dd0ba0ba1faef  fu_a10_dnet_f2.ts.pt
+073cef3999d42e5d90132b05c5a9d1a8  fu_a10_dnet_f3.ts.pt
+3abf1d44c8ff1f5725709a763180f930  fu_a10_dnet_f4.ts.pt
 817332bf6e83724239dce0a7f16b72bf  fu_a1_dnet_f0.ts.pt
 d9250259100d5640b88a3fe515506395  fu_a1_dnet_f1.ts.pt
 b2cefac75e5b50502dd50120994894dd  fu_a1_dnet_f2.ts.pt
@@ -30,8 +83,51 @@ b2cefac75e5b50502dd50120994894dd  fu_a1_dnet_f2.ts.pt
 598e6d68eafdc351a702ffd8fcd04fd8  fu_a1_dnet_f4.ts.pt
 21a16217f64424c698e0bfbdbf323893  fu_a2_dnet_f0.ts.pt
 f07646da78b2b8cb0ba3f3751011655d  fu_a2_dnet_f1.ts.pt
+b466632e750236f9a9ba28e5e4da4cd3  fu_a2_dnet_f2.ts.pt
+a34821dc58bad94bc6a2aeeb976705cc  fu_a2_dnet_f3.ts.pt
+5a1d12e3667600f4ef257aa3aafc8837  fu_a2_dnet_f4.ts.pt
+e79d98b551ccde8759b015c4834139e6  fu_a3_dnet_f0.ts.pt
+85530f6ada2e466718a9385b8e56f896  fu_a3_dnet_f1.ts.pt
+7b7c368cc689af7fbb3b9a52240208d4  fu_a3_dnet_f2.ts.pt
+a126d043190c26291c564306995afc4f  fu_a3_dnet_f3.ts.pt
+3f3683b92855a5411ad4e0c2173fb990  fu_a3_dnet_f4.ts.pt
+8cb18082a24f573cca97d3c80b1d13ac  fu_a4_dnet_f0.ts.pt
+310106d3a96f979ee6fbe0ae83789253  fu_a4_dnet_f1.ts.pt
+065a95b1ca3caecb84249485d5cb6490  fu_a4_dnet_f2.ts.pt
+e3fc20bc6f0cf32495fb2475088628f3  fu_a4_dnet_f3.ts.pt
+14ccaf12da4a465b49510f91f0d94a51  fu_a4_dnet_f4.ts.pt
+2e21cb0589ab2e0fbe28182787b34c1a  fu_a5_dnet_f0.ts.pt
+54383eb37e06d2a0d9cab957f093ca71  fu_a5_dnet_f1.ts.pt
+97fd397bd34eda61fbf0b881b8f87fac  fu_a5_dnet_f2.ts.pt
+f80b26c673eb63f3198c1f9b7505bb55  fu_a5_dnet_f3.ts.pt
+eedbf02411b887a4b430382bd84b3197  fu_a5_dnet_f4.ts.pt
+661a5cbba506100c8fde357e0c4d2349  fu_a6_dnet_f0.ts.pt
+3acef097034a4fd8cae20b1a26e7da28  fu_a6_dnet_f1.ts.pt
+766ba1e5cb39e614da04ff1015fb3741  fu_a6_dnet_f2.ts.pt
+e5df3a57aba0f6ff87cd28115b8e2500  fu_a6_dnet_f3.ts.pt
+4f59c906b391f9d8383709da194601dc  fu_a6_dnet_f4.ts.pt
+348062560cde1a9744836b84496edb51  fu_a7_dnet_f0.ts.pt
+027fac5d4770433aff2dadc835cc2b2d  fu_a7_dnet_f1.ts.pt
+4dabf85f89a1a2490eac78f40bc257ac  fu_a7_dnet_f2.ts.pt
+9552e2adc92ff28ea30b9e226b68b2c2  fu_a7_dnet_f3.ts.pt
+ceb14c0d578a24519e09be921f7ed466  fu_a7_dnet_f4.ts.pt
+985306d75cbfd14894c3decdcff34018  fu_a8_dnet_f0.ts.pt
+dedb159fae4c4e2580d43c3fcab0221a  fu_a8_dnet_f1.ts.pt
+f4c38dd72443d485a83b64f48f7b286c  fu_a8_dnet_f2.ts.pt
+7e87cfd09efac348494a70c476d53e88  fu_a8_dnet_f3.ts.pt
+c97007613d7be6e2d953e099e851ba85  fu_a8_dnet_f4.ts.pt
+e91ee6cba69da19eea0c48c974b4f5ec  fu_a9_dnet_f0.ts.pt
+a09db4ebc130dbdfafa5f129ef006d26  fu_a9_dnet_f1.ts.pt
+07a268a9aed969237e766c4b1412a455  fu_a9_dnet_f2.ts.pt
+8ed5ab4ef6d29e5d98894a836a81f212  fu_a9_dnet_f3.ts.pt
+00f2d4479d3dece7f06f4ac5f9e97803  fu_a9_dnet_f4.ts.pt
 
-## retrained per-fold validation metrics (from the logs in docs/repro/logs/)
+## retrained per-fold validation metrics (logs in docs/repro/logs/)
+[fu_a10_dnet f0] done 56.0 min: ll 0.2910 auc 0.9588
+[fu_a10_dnet f1] done 52.5 min: ll 0.2391 auc 0.9763
+[fu_a10_dnet f2] done 55.7 min: ll 0.1884 auc 0.9854
+[fu_a10_dnet f3] done 58.0 min: ll 0.2882 auc 0.9726
+[fu_a10_dnet f4] done 58.5 min: ll 0.2225 auc 0.9747
 [fu_a1_dnet f0] done 61.9 min: ll 0.2027 auc 0.9823
 [fu_a1_dnet f1] done 59.6 min: ll 0.2207 auc 0.9772
 [fu_a1_dnet f2] done 58.9 min: ll 0.3273 auc 0.9515
@@ -39,3 +135,41 @@ f07646da78b2b8cb0ba3f3751011655d  fu_a2_dnet_f1.ts.pt
 [fu_a1_dnet f4] done 57.5 min: ll 0.1708 auc 0.9850
 [fu_a2_dnet f0] done 58.1 min: ll 0.2363 auc 0.9752
 [fu_a2_dnet f1] done 57.8 min: ll 0.2478 auc 0.9709
+[fu_a2_dnet f2] done 58.3 min: ll 0.2974 auc 0.9634
+[fu_a2_dnet f3] done 57.6 min: ll 0.2743 auc 0.9670
+[fu_a2_dnet f4] done 58.0 min: ll 0.2114 auc 0.9829
+[fu_a3_dnet f0] done 57.9 min: ll 0.3257 auc 0.9584
+[fu_a3_dnet f1] done 56.5 min: ll 0.1977 auc 0.9795
+[fu_a3_dnet f2] done 58.9 min: ll 0.2873 auc 0.9624
+[fu_a3_dnet f3] done 57.1 min: ll 0.2307 auc 0.9837
+[fu_a3_dnet f4] done 59.8 min: ll 0.2605 auc 0.9717
+[fu_a4_dnet f0] done 58.2 min: ll 0.2759 auc 0.9715
+[fu_a4_dnet f1] done 58.5 min: ll 0.2447 auc 0.9761
+[fu_a4_dnet f2] done 57.1 min: ll 0.2070 auc 0.9770
+[fu_a4_dnet f3] done 57.7 min: ll 0.2979 auc 0.9654
+[fu_a4_dnet f4] done 57.3 min: ll 0.2174 auc 0.9748
+[fu_a5_dnet f0] done 58.1 min: ll 0.2434 auc 0.9752
+[fu_a5_dnet f1] done 57.0 min: ll 0.2718 auc 0.9635
+[fu_a5_dnet f2] done 58.0 min: ll 0.2521 auc 0.9763
+[fu_a5_dnet f3] done 56.6 min: ll 0.2517 auc 0.9725
+[fu_a5_dnet f4] done 57.5 min: ll 0.2551 auc 0.9762
+[fu_a6_dnet f0] done 57.8 min: ll 0.2854 auc 0.9606
+[fu_a6_dnet f1] done 56.9 min: ll 0.2269 auc 0.9793
+[fu_a6_dnet f2] done 56.8 min: ll 0.2078 auc 0.9770
+[fu_a6_dnet f3] done 58.7 min: ll 0.3609 auc 0.9612
+[fu_a6_dnet f4] done 57.5 min: ll 0.1891 auc 0.9841
+[fu_a7_dnet f0] done 57.8 min: ll 0.3225 auc 0.9651
+[fu_a7_dnet f1] done 57.9 min: ll 0.2473 auc 0.9764
+[fu_a7_dnet f2] done 59.6 min: ll 0.2346 auc 0.9702
+[fu_a7_dnet f3] done 58.4 min: ll 0.2781 auc 0.9639
+[fu_a7_dnet f4] done 58.4 min: ll 0.2129 auc 0.9813
+[fu_a8_dnet f0] done 58.8 min: ll 0.2158 auc 0.9776
+[fu_a8_dnet f1] done 57.5 min: ll 0.2319 auc 0.9719
+[fu_a8_dnet f2] done 59.4 min: ll 0.2676 auc 0.9696
+[fu_a8_dnet f3] done 59.0 min: ll 0.2734 auc 0.9678
+[fu_a8_dnet f4] done 57.7 min: ll 0.2310 auc 0.9750
+[fu_a9_dnet f0] done 56.9 min: ll 0.2403 auc 0.9674
+[fu_a9_dnet f1] done 57.1 min: ll 0.2384 auc 0.9758
+[fu_a9_dnet f2] done 56.9 min: ll 0.3437 auc 0.9727
+[fu_a9_dnet f3] done 53.3 min: ll 0.1990 auc 0.9810
+[fu_a9_dnet f4] done 55.6 min: ll 0.2422 auc 0.9709
