@@ -49,7 +49,8 @@ a = ap.parse_args()
 os.makedirs(os.path.dirname(a.out), exist_ok=True)
 torch.manual_seed(42); np.random.seed(42)
 dev = "cuda"
-ROOT = "/ssd/datasets/DAT_SCAN"
+from datscan import paths as P
+ROOT = str(P.WORK)
 SH = (128, 128, 92)
 
 lab = pd.read_csv(f"{ROOT}/train_labels_JNDlMjr.csv")

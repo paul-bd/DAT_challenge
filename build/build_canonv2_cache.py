@@ -18,13 +18,14 @@ Two things here are load-bearing and have each cost a retraction in this project
   * the mask is the localiser's hard `q < 1` ellipsoid test, verified byte-identical to the training
     masks on all 1362 scans; do not substitute a soft render and threshold it.
 
-  usage: python build/build_canonv2_cache.py --niftis /ssd/datasets/DAT_SCAN/niftis \
-             --out /ssd/datasets/DAT_SCAN/boxcache [--limit N] [--verify]
+  usage: python build/build_canonv2_cache.py --niftis $DAT_NIFTIS \
+             --out $DAT_WORK/boxcache [--limit N] [--verify]
 
 `--verify` rebuilds a handful of scans and correlates them against an existing cache instead of
 writing anything: the gate this repo was assembled under.
 """
 import argparse, os, sys, numpy as np, torch, nibabel as nib
+from datscan import paths as P
 from scipy import ndimage as ndi
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -78,9 +79,9 @@ def canon_batch(xb, ell, device):
 
 def main():
     ap_ = argparse.ArgumentParser()
-    ap_.add_argument("--niftis", default="/ssd/datasets/DAT_SCAN/niftis")
+    ap_.add_argument("--niftis", default=str(P.NIFTIS))
     ap_.add_argument("--uids", default=os.path.join(os.path.dirname(HERE), "meta", "uids.csv"))
-    ap_.add_argument("--out", default="/ssd/datasets/DAT_SCAN/boxcache")
+    ap_.add_argument("--out", default=str(P.BOXCACHE))
     ap_.add_argument("--ellipse", default=os.path.join(INF, "assets", "ellipse.ts.pt"))
     ap_.add_argument("--bs", type=int, default=8)
     ap_.add_argument("--limit", type=int, default=0)

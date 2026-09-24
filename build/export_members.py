@@ -16,6 +16,7 @@ Export gates, each of which exists because its absence once shipped a broken pac
 16 scans the tracer never saw. Run it before shipping anything.
 """
 import argparse, json, os, sys, numpy as np, torch
+from datscan import paths as P
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -34,8 +35,8 @@ ap.add_argument("--runs", required=True, help="directory holding <member>__best_
 ap.add_argument("--members", default="", help="comma-separated; or use --recipe")
 ap.add_argument("--recipe", default="", help="recipes/*.json -- takes the member list from it")
 ap.add_argument("--out", required=True)
-ap.add_argument("--box-cache", default="/ssd/datasets/DAT_SCAN/boxcache/canonv2.f16.npy")
-ap.add_argument("--mask-cache", default="/ssd/datasets/DAT_SCAN/boxcache/canonv2mask_ell.u8.npy")
+ap.add_argument("--box-cache", default=str(P.BOX_CANONV2))
+ap.add_argument("--mask-cache", default=str(P.MASK_CANONV2))
 ap.add_argument("--ref", default="3,700,1100", help="cache rows to trace with (real boxes)")
 a = ap.parse_args()
 

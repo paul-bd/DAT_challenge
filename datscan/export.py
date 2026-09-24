@@ -40,7 +40,8 @@ def _anchor_for(recipe, idx):
     """Anchor regions for the traced example inputs (ellipse masks projected over S-I), or None."""
     if recipe.ndt_anchor != "striatal":
         return None
-    m = np.load(recipe.mask3d_cache, mmap_mode="r")
+    from . import paths as _PATHS
+    m = np.load(_PATHS.expand(recipe.mask3d_cache), mmap_mode="r")
     return torch.from_numpy(np.asarray(m[list(idx)], dtype=np.float32))[:, None].amax(-1)
 
 

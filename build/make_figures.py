@@ -19,6 +19,7 @@ what the model is confident about rather than cherry-picked by eye. Their uids a
 into the figure captions.
 """
 import argparse, os, sys, numpy as np, torch
+from datscan import paths as P
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -317,12 +318,12 @@ def fig_discordant(cases, comp, cmask, net, out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=os.path.join(ROOT, "docs", "figures"))
-    ap.add_argument("--niftis", default="/ssd/datasets/DAT_SCAN/niftis")
-    ap.add_argument("--box-cache", default="/ssd/datasets/DAT_SCAN/boxcache/canonv2.f16.npy")
-    ap.add_argument("--mask-cache", default="/ssd/datasets/DAT_SCAN/boxcache/canonv2mask_ell.u8.npy")
-    ap.add_argument("--runs", default="/ssd/datasets/DAT_SCAN/runs_fusion150")
+    ap.add_argument("--niftis", default=str(P.NIFTIS))
+    ap.add_argument("--box-cache", default=str(P.BOX_CANONV2))
+    ap.add_argument("--mask-cache", default=str(P.MASK_CANONV2))
+    ap.add_argument("--runs", default=str(P.WORK / "runs_fusion10"))
     ap.add_argument("--member", default="fu_a1_dnet", help="member whose trained net supplies the views")
-    ap.add_argument("--traces", default="/ssd/datasets/DAT_SCAN/winner_assets",
+    ap.add_argument("--traces", default=str(P.MODELS),
                     help="dir with the shipped fu_a*_dnet_f*.ts.pt traces (OOF fallback when --runs is gone)")
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)

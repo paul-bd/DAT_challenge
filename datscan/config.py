@@ -465,7 +465,7 @@ class Recipe:
     ndt_anchor: str = "global"      # "global" = shipped (0.5 x map max); "striatal" = 0.5 x max inside
                                     # the ellipse-localiser mask, ONE scalar per scan, no branch. Under
                                     # screen (2026-08-26); needs the mask at inference => ellipse.ts.pt.
-    mask3d_cache: str = "/ssd/datasets/DAT_SCAN/boxcache/mask3d.u8.npy"
+    mask3d_cache: str = "${DAT_WORK}/boxcache/mask3d.u8.npy"
     # ---- train-time input jitter (user's programme, 2026-08-27; all OFF by default, inference untouched)
     tau_jitter: float = 0.0         # tau *= exp(N(0, s)) per scan. n_jall used 0.25 (2-3x tau's natural
                                     # per-scan CV of 7-13%) and cost +0.0136; screen at 0.10.
@@ -602,7 +602,7 @@ class Recipe:
                                     # cache comp3 / mask3d3, box (86,86,62); every voxel-scale constant in
                                     # the projection is derived from spacing (30 mm aperture, 40 mm erosion
                                     # depth, 64 mm fallback window at the striatal centroid).
-    box_cache: str = "/ssd/datasets/DAT_SCAN/boxcache/comp.f16.npy"
+    box_cache: str = "${DAT_WORK}/boxcache/comp.f16.npy"
     labels: str = "meta/labels.npy"
     splits: str = "splits.csv"          # uid-indexed; joined on uid, never read positionally
 

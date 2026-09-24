@@ -8,7 +8,8 @@ fold-model on 16 different scans, in f32 on CPU and on GPU, and reports the wors
   usage: python verify_traces.py [assets_dir] [members_dir]
 """
 import sys, os, glob, json, numpy as np, torch
-sys.path.insert(0, "/home/pbd/PROJETS/DATscan"); sys.path.insert(0, "/ssd/datasets/DAT_SCAN/fusion_pkg")
+from datscan import paths as P
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import canonize as CZ
 from datscan.config import Recipe
 from datscan.model import DatNet
@@ -18,11 +19,11 @@ torch._C._jit_set_profiling_executor(False); torch._C._jit_set_profiling_mode(Fa
 torch._C._jit_override_can_fuse_on_cpu(False); torch._C._jit_override_can_fuse_on_gpu(False)
 torch._C._jit_set_texpr_fuser_enabled(False)
 
-A = sys.argv[1] if len(sys.argv) > 1 else "/ssd/datasets/DAT_SCAN/fusion_pkg/assets_pmc"
-D = sys.argv[2] if len(sys.argv) > 2 else "/ssd/datasets/DAT_SCAN/runs_mixed"
+A = sys.argv[1] if len(sys.argv) > 1 else str(P.MODELS)
+D = sys.argv[2] if len(sys.argv) > 2 else str(P.WORK / "runs_fusion10")
 TRACE_REF = {3, 700, 1100}                      # the boxes build_pmc10.py traced with -- excluded here
-comp = np.load("/ssd/datasets/DAT_SCAN/boxcache/canonv2.f16.npy", mmap_mode="r")
-cmask = np.load("/ssd/datasets/DAT_SCAN/boxcache/canonv2mask_ell.u8.npy", mmap_mode="r")
+comp = np.load(str(P.BOX_CANONV2), mmap_mode="r")
+cmask = np.load(str(P.MASK_CANONV2), mmap_mode="r")
 rng = np.random.default_rng(7)
 ii = [i for i in rng.choice(len(comp), 40, replace=False) if i not in TRACE_REF][:16]
 x = torch.from_numpy(np.asarray(comp[ii], np.float32))[:, None]
