@@ -53,6 +53,17 @@ Tesla V100S-PCIE-32GB x3 (any single >=11 GB CUDA GPU works), 24-core CPU,
 Training: ~2 h 15 per fold, 50 folds (~12 h wall on 3 GPUs).
 Inference: ~3.4 s/scan cold, well inside the competition's 3 h / 3000-scan budget.
 
+
+### Shipped weights — download
+
+The complete prize package (this repo + all trained weights) is hosted at
+**https://huggingface.co/paulonium/dat-challenge-winner**
+(`prize_submission.tar.gz`, 2.9 GB, private — request access or use the
+DrivenData handoff copy).
+
+sha256: `9752e5b3273841b343b73131cf55a038fcffa501899c1b915981802a05e1da65`
+(verified equal on the local build and on the Hub's LFS storage)
+
 ### Inference with the shipped weights (no retraining)
 
 `inference/main.py` is the exact program submitted: point it at any folder of
