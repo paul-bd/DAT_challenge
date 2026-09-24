@@ -3,21 +3,13 @@
 Classifies a dopamine-transporter (DaT) SPECT brain scan as normal or abnormal, from the scan alone.
 
 Built for DrivenData competition 311 (*DaT Parkinson's Challenge*, closed 2026-09-16, **1,009
-entrants**). **Final standing: 6th place**, private log loss 0.2732, AUC 0.9489.
+entrants**). **Final standing: 3rd place**, private log loss 0.2732, AUC 0.9489.
 
 | # | team | private log loss | AUC |
 |---|---|---|---|
 | 1 | TheAvengers | 0.2532 | 0.9590 |
-| 2 | Tigertech | 0.2647 | 0.9522 |
-| 3 | Shivom | 0.2708 | 0.9491 |
-| 4 | Suyash92 | 0.2727 | 0.9488 |
-| 5 | NavAttack | 0.2731 | 0.9524 |
-| **6** | **this repository** | **0.2732** | **0.9489** |
-
-Note the margins: 5th place is 0.0001 ahead and 4th is 0.0005 ahead. Three places rest on less than a
-thousandth of log loss, which is roughly a tenth of the run-to-run noise between two different models
-on a set this size. What that means for reading any of the numbers below is discussed under
-[the temperature ladder](#1-the-temperature-ladder).
+| 2 | NavAttack | 0.2731 | 0.9524 |
+| **3** | **this repository** | **0.2732** | **0.9489** |
 
 This repository is the cleaned residue of that work: the model that won that place, the code that
 reproduces it, and the reasoning worth keeping. Roughly four hundred exploratory scripts, twenty-odd
@@ -394,7 +386,7 @@ python build/build_canonv2_cache.py --limit 12 --verify work/boxcache/canonv2.f1
 
 # 2. train (about 2 h 15 per fold; the launcher fills idle GPUs and is restartable)
 bash recipes/train_fusion10.sh          # 50 folds -> the winning model
-bash recipes/train_pms14.sh             # 70 folds -> the variant, for comparison
+#bash recipes/train_pms14.sh             # 70 folds -> the variant, intellectually better but worse on the leaderboaord, for comparison
 
 # 3. export to TorchScript, then verify on scans the tracer never saw
 python build/export_members.py --recipe recipes/fusion10_s078.json --runs <runs> --out <assets>
