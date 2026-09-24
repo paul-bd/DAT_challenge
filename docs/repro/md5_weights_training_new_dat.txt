@@ -1,0 +1,41 @@
+# Reproduction run — first completed folds of the winning recipe (fusion10)
+# Date: 2026-09-24
+# Env: conda `training_new_dat` — Python 3.12, torch 2.10.0+cu128, exact requirements.txt pins.
+#   Gates passed before training: cache VERIFY n=12 corr 1.0000 PASS; tests/run_all.py GATE PASS
+#   (T2 40/40 seeds bit-identical, T3 max|dp| 0.000e+00 on shipped traces).
+# Hardware: 3x Tesla V100S-PCIE-32GB. ~58-62 min/fold.
+# Launcher: recipes/train_fusion10.sh, DAT_WORK=/ssd/datasets/DAT_SCAN
+#
+# NOTE on the comparison: the new files are f32 state-dict checkpoints
+# (`{member}__best_fold{f}.pt`); the shipped weights are f16 TorchScript traces
+# (`models/{member}_f{f}.ts.pt`). Different format, different training run —
+# md5 equality is not expected and does not hold. Both sets are recorded so the
+# retrained weights are pinned; functional equivalence of code vs shipped
+# traces is what T3 asserts (0.000e+00).
+
+## retrained checkpoints (/ssd/datasets/DAT_SCAN/runs_fusion10)
+0570c32bc3e88101367f7c2ffaa8e301  fu_a1_dnet__best_fold0.pt
+e08039d70bc5d4f767cb210690bb1dfa  fu_a1_dnet__best_fold1.pt
+7feb28f335be72298fd0f88bc3ac1c79  fu_a1_dnet__best_fold2.pt
+57be563cfec1e44267972bdfef65b3d4  fu_a1_dnet__best_fold3.pt
+c00713cdaf5dd5f3ca14e9161abeed1e  fu_a1_dnet__best_fold4.pt
+e369f57ea0d579644f006f994dfcecb4  fu_a2_dnet__best_fold0.pt
+567d2c3c0f502bd63669764bc3862037  fu_a2_dnet__best_fold1.pt
+
+## shipped traces (models/), same members/folds
+817332bf6e83724239dce0a7f16b72bf  fu_a1_dnet_f0.ts.pt
+d9250259100d5640b88a3fe515506395  fu_a1_dnet_f1.ts.pt
+b2cefac75e5b50502dd50120994894dd  fu_a1_dnet_f2.ts.pt
+3715c4f34204aa7d11474beabff81eee  fu_a1_dnet_f3.ts.pt
+598e6d68eafdc351a702ffd8fcd04fd8  fu_a1_dnet_f4.ts.pt
+21a16217f64424c698e0bfbdbf323893  fu_a2_dnet_f0.ts.pt
+f07646da78b2b8cb0ba3f3751011655d  fu_a2_dnet_f1.ts.pt
+
+## retrained per-fold validation metrics (from the logs in docs/repro/logs/)
+[fu_a1_dnet f0] done 61.9 min: ll 0.2027 auc 0.9823
+[fu_a1_dnet f1] done 59.6 min: ll 0.2207 auc 0.9772
+[fu_a1_dnet f2] done 58.9 min: ll 0.3273 auc 0.9515
+[fu_a1_dnet f3] done 58.1 min: ll 0.2750 auc 0.9664
+[fu_a1_dnet f4] done 57.5 min: ll 0.1708 auc 0.9850
+[fu_a2_dnet f0] done 58.1 min: ll 0.2363 auc 0.9752
+[fu_a2_dnet f1] done 57.8 min: ll 0.2478 auc 0.9709
