@@ -61,12 +61,12 @@
     "sagfuse_aux": 0.3,
     "anchor_guard": true,
     "ndt_anchor": "striatal",
-    "mask3d_cache": "/ssd/datasets/DAT_SCAN/boxcache/canonv2mask_ell.u8.npy",
+    "mask3d_cache": "${DAT_WORK}/boxcache/canonv2mask_ell.u8.npy",
     "lesion_p": 0.25,
     "lesion_lo": 0.45,
     "lesion_hi": 0.9,
     "fuse_lr_mult": 0.3,
-    "box_cache": "/ssd/datasets/DAT_SCAN/boxcache/canonv2.f16.npy"
+    "box_cache": "${DAT_WORK}/boxcache/canonv2.f16.npy"
   },
   "calibration": {
     "slope": 0.85,

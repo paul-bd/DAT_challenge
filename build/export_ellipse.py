@@ -19,6 +19,7 @@ EXPORT RULES HONOURED (CLAUDE.md, each learned the hard way):
     but this script VERIFIES rather than trusts that, by running the CPU trace on GPU.
 """
 import sys, os
+from datscan import paths as P
 sys.path.insert(0, "."); sys.path.insert(0, "monai_pipeline")
 import numpy as np, torch, pandas as pd
 
@@ -70,8 +71,8 @@ if __name__ == "__main__":
     net.load_state_dict({k: v for k, v in sd.items() if k != "a_logit"}, strict=False)
     wrap = EllipseCRR(net).eval()
 
-    lab = pd.read_csv("/ssd/datasets/DAT_SCAN/train_labels_JNDlMjr.csv")
-    boxes = np.load("/ssd/datasets/DAT_SCAN/boxcache/comp.f16.npy", mmap_mode="r")
+    lab = pd.read_csv(str(P.LABELS))
+    boxes = np.load(str(P.BOXCACHE / "comp.f16.npy"), mmap_mode="r")
     xr = torch.from_numpy(np.asarray(boxes[:4], dtype=np.float32))[:, None]      # REAL boxes
 
     with torch.no_grad():

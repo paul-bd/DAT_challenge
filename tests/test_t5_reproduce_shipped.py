@@ -16,10 +16,14 @@ import json, os, sys, numpy as np, pytest, torch
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT); sys.path.insert(0, os.path.join(ROOT, "inference"))
 
-BOX = "/ssd/datasets/DAT_SCAN/boxcache/canonv2.f16.npy"
-MASK = "/ssd/datasets/DAT_SCAN/boxcache/canonv2mask_ell.u8.npy"
-CASES = [("fusion10", "/ssd/datasets/DAT_SCAN/runs_fusion150", "fu_a1_dnet"),
-         ("pms14", "/ssd/datasets/DAT_SCAN/runs_full20", "w01")]
+from datscan import paths as P
+BOX = str(P.BOX_CANONV2)
+MASK = str(P.MASK_CANONV2)
+# Original training run dirs; not part of the prize archive. The test skips
+# without them — T3 covers code<->shipped-weights equivalence from the
+# archive alone.
+CASES = [("fusion10", str(P.WORK / "runs_fusion150"), "fu_a1_dnet"),
+         ("pms14", str(P.WORK / "runs_full20"), "w01")]
 
 
 @pytest.mark.parametrize("label,runs,member", CASES)

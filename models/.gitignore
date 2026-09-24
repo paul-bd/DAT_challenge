@@ -1,0 +1,5 @@
+*.ts.pt
+*.pt
+calibration.json
+canon_const.json
+!README.md

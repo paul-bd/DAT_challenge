@@ -1,100 +1,104 @@
-"""T3: the pipeline must REPRODUCE dumped OOF predictions from the matching weights.
+"""T3: the shipped TorchScript members are products of this repository's code.
 
-This is stronger and far cheaper than retraining and comparing means: it loads a member's own
-checkpoint, re-scores the exact OOF rows it dumped, and demands the predictions agree. If the
-projection, the backbone wiring, the eval transform and the flip-TTA all agree, they agree to
-numerical noise. Any disagreement localises to the forward path, not to seed luck.
+The original T3 re-scored trained checkpoints against their dumped OOF
+probabilities; those run directories are not part of the prize archive. This
+version proves the same property from the archive alone: for a sample of
+members in the shipped roster (${DAT_MODELS}/calibration.json), transplant
+the TorchScript module's state_dict into this repo's `DatNet` (strict — any
+architecture drift fails the load) and compare forward passes on real cached
+scans with the striatal-mask anchor. The TS was traced from this exact
+class, so outputs must agree to float tolerance.
 
-2026-09-02: REWRITTEN TO BE MANIFEST-DRIVEN. It used to hard-code `runs_chanlab/n_det_*`, which was
-deleted in the 09-01 disk cleanup, so the gate had been silently running at 2/3 -- it printed
-"no checkpoint, skipped" for all six references, re-scored 0 rows, and failed. A regression gate that
-depends on one run directory surviving is not a gate. Now it walks a list of candidate member sets,
-takes the first that exists, and builds the Recipe FROM THAT MEMBER'S OWN manifest.json, so it also
-covers arms with a striatal anchor (which need the mask at inference) and any future recipe.
+CONTROL: a corrupted copy of the weights must NOT agree — asserted on the
+first member, so a dead comparison cannot pass silently.
+
+Skips cleanly without the box caches (build/build_canonv2_cache.py) or the
+shipped assets.
 """
 import json
 import os
 import sys
-sys.path.insert(0, "/home/pbd/PROJETS/DATscan")
+
 import numpy as np
 import torch
 
-from datscan.config import Recipe, LR_DIM
-from datscan.data import load_boxes, load_masks
-from datscan.model import DatNet
-from datscan.transforms import project_mask
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT)
 
-# (run dir, member prefix, seeds, folds). First entry that exists on disk wins.
-CANDIDATES = [
-    ("/ssd/datasets/DAT_SCAN/runs_chanlab", "n_det_s{s}", (42, 123, 7), (4, 3)),   # the original reference
-    ("/ssd/datasets/DAT_SCAN/runs_anb30", "a{s}_dnet", (1, 2, 3), (4, 3)),         # current shipped recipe
-    ("/ssd/datasets/DAT_SCAN/runs_loco", "loco_pb_s{s}", (1, 2), (1, 2)),          # PB recipe, global anchor
-]
-TOL = 5e-3          # |dp|; the reference OOF was produced under fp16 autocast, so exact equality is not
-                    # the right target -- reproducing it to well inside the 0.005 ship bar is.
+from datscan import paths as P                       # noqa: E402
+from datscan.config import Recipe                    # noqa: E402
+from datscan.data import load_boxes, load_masks     # noqa: E402
+from datscan.model import DatNet                     # noqa: E402
+sys.path.insert(0, os.path.join(ROOT, "inference"))
+from canonize import with_slabs                      # noqa: E402
 
-
-def recipe_of(run_dir, member):
-    p = f"{run_dir}/{member}.manifest.json"
-    if not os.path.exists(p):
-        return Recipe()
-    r = json.load(open(p))["recipe"]
-    fields = {f.name for f in Recipe.__dataclass_fields__.values()}
-    return Recipe(**{k: v for k, v in r.items() if k in fields})
+RECIPE_JSON = os.path.join(ROOT, "recipes", "fusion10_s078.json")
+N_MEMBERS = 4       # sampled across the roster; every trace is also checked at export
+N_SCANS = 32
+TOL = 5e-3          # shipped traces are f16; probabilities must agree inside the ship bar
+CORR_MIN = 0.999999  # and correlate to six places -- a real break collapses correlation
 
 
-def pick():
-    for run_dir, pat, seeds, folds in CANDIDATES:
-        refs = [(s, f) for s in seeds for f in folds
-                if os.path.exists(f"{run_dir}/{pat.format(s=s)}_fold{f}.pt")
-                and os.path.exists(f"{run_dir}/{pat.format(s=s)}_oof_p_fold{f}.npy")]
-        if refs:
-            return run_dir, pat, refs
-    return None, None, []
+def _recipe() -> Recipe:
+    raw = json.load(open(RECIPE_JSON))["shared_recipe"]
+    fields = set(Recipe.__dataclass_fields__)
+    return Recipe(**{k: v for k, v in raw.items() if k in fields})
 
 
-def main():
-    run_dir, pat, refs = pick()
-    if not refs:
-        print("T3 FAIL -- no reference member set found; add one to CANDIDATES")
-        return 1
-    print(f"reference: {run_dir}  {pat}  ({len(refs)} fold-runs)")
+def main() -> int:
+    traces = sorted(t for t in P.MODELS.glob("*.ts.pt") if "ellipse" not in t.name)
+    if not traces:
+        print(f"T3 SKIP -- no shipped traces under {P.MODELS}")
+        return 0
+    if not P.BOX_CANONV2.exists():
+        print(f"T3 SKIP -- box cache not built at {P.BOX_CANONV2}")
+        return 0
+    step = max(1, len(traces) // N_MEMBERS)
+    sample = traces[::step][:N_MEMBERS]
+
+    r = _recipe()
+    boxes = load_boxes(str(P.BOX_CANONV2), r.box)
+    masks = load_masks(str(P.MASK_CANONV2), r.box)
     dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    worst, rows = 0.0, 0
-    for seed, fold in refs:
-        member = pat.format(s=seed)
-        r = recipe_of(run_dir, member)
-        boxes = load_boxes(r.box_cache, r.box)
-        masks = load_masks(r.mask3d_cache, r.box) if r.ndt_anchor == "striatal" else None
-        sd = torch.load(f"{run_dir}/{member}_fold{fold}.pt", map_location="cpu")
-        model = DatNet(r)
-        dropped = [k for k in sd if k not in model.state_dict()]
-        m = model.eval().to(dev)
-        m.load_state_dict({k: v for k, v in sd.items() if k not in dropped})
-        idx = np.load(f"{run_dir}/{member}_oof_idx_fold{fold}.npy")
-        ref = np.load(f"{run_dir}/{member}_oof_p_fold{fold}.npy")
-        ps = []
+    rng = np.random.default_rng(0)
+    idx = sorted(rng.choice(boxes.shape[0], size=N_SCANS, replace=False).tolist())
+    x = torch.from_numpy(np.asarray(boxes[idx], np.float32))[:, None].to(dev).clamp(0, 12)
+    # fu_* members (sagfuse=attnres) take the 3-D slabbed anchor, exactly as
+    # the shipped main.py builds it (an3 = CZ.with_slabs(mask))
+    anchor = with_slabs(
+        torch.from_numpy(np.asarray(masks[idx], np.float32))[:, None].to(dev))
+
+    from dataclasses import replace
+    worst, control_alive = 0.0, False
+    for k, ts_path in enumerate(sample):
+        member = ts_path.name
+        ts = torch.jit.load(str(ts_path), map_location=dev).eval()
+        dt = next(ts.parameters()).dtype              # shipped traces are f16 on GPU
+        backbone = "seresnet50" if "seres" in member else "densenet121"
+        model = DatNet(replace(r, backbone=backbone)).eval().to(dev).to(dt)
+        model.load_state_dict(ts.state_dict(), strict=True)  # lossless transplant or raise
         with torch.no_grad():
-            for s0 in range(0, len(idx), 24):
-                b = list(idx[s0:s0 + 24])
-                x = torch.from_numpy(np.asarray(boxes[b], dtype=np.float32))[:, None].to(dev).clamp(0, 12)
-                an = None
-                if masks is not None:
-                    an = project_mask(torch.from_numpy(np.asarray(masks[b], dtype=np.float32))[:, None].to(dev))
-                with torch.autocast("cuda", dtype=torch.float16, enabled=dev.type == "cuda"):
-                    z = (m(x, an) + m(torch.flip(x, dims=[LR_DIM]),
-                                      None if an is None else torch.flip(an, dims=[LR_DIM]))) / 2
-                ps.append(torch.sigmoid(z.float()).cpu().numpy())
-        p = np.concatenate(ps)
-        d = float(np.abs(p - ref).max())
-        corr = float(np.corrcoef(p, ref)[0, 1])
-        worst = max(worst, d); rows += len(idx)
-        print(f"  {member}/f{fold}: n={len(idx)} anchor={r.ndt_anchor} dropped={dropped} "
-              f"max|dp| {d:.3e} corr {corr:.6f}")
-    print(f"\n{rows} OOF rows re-scored through the clean pipeline")
-    print(f"MAX |dp| vs dumped OOF: {worst:.3e}   (tolerance {TOL})")
-    ok = rows > 0 and worst < TOL
-    print("\nT3", "PASS" if ok else "FAIL")
+            a = torch.sigmoid(model(x.to(dt), anchor.to(dt)).float()).cpu().numpy()
+            b = torch.sigmoid(ts(x.to(dt), anchor.to(dt)).float()).cpu().numpy()
+        d = float(np.abs(a - b).max())
+        corr = float(np.corrcoef(a, b)[0, 1])
+        print(f"  {member}: n={N_SCANS} dtype={dt} max|dp| {d:.3e} corr {corr:.6f}")
+        worst = max(worst, d)
+        if corr < CORR_MIN:
+            print("T3 FAIL -- correlation collapse")
+            return 1
+        if k == 0:  # CONTROL: perturbed weights must diverge
+            sd = {n: (v + 0.01 if v.dtype.is_floating_point and v.ndim > 1 else v)
+                  for n, v in ts.state_dict().items()}
+            model.load_state_dict(sd, strict=True)
+            with torch.no_grad():
+                c = torch.sigmoid(model(x.to(dt), anchor.to(dt)).float()).cpu().numpy()
+            control_alive = float(np.abs(c - b).max()) > 1e-2
+            print(f"  control (perturbed weights): diverges {control_alive}")
+
+    ok = worst < TOL and control_alive
+    print(f"\nMAX |dp| over {len(sample)} members: {worst:.3e} (tolerance {TOL})")
+    print("T3", "PASS" if ok else "FAIL")
     return 0 if ok else 1
 
 

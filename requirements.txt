@@ -1,0 +1,14 @@
+# Exact versions of the environment the winning entry was built and verified
+# with (Python 3.12, CUDA 12.8). Inference needs only the first five;
+# monai / scikit-learn / matplotlib are used at training / evaluation /
+# figure time.
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.10.0
+numpy==1.26.4
+scipy==1.17.1
+nibabel==5.4.2
+pandas==2.3.3
+monai==1.6.0
+scikit-learn==1.9.0
+matplotlib==3.10.9
+pytest==8.*

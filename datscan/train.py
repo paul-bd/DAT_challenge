@@ -26,6 +26,7 @@ import torch.nn.functional as F
 from monai.data import DataLoader
 from sklearn.metrics import log_loss, roc_auc_score
 
+from . import paths as _PATHS
 from .config import Recipe, LR_DIM
 from .data import BoxDataset, load_boxes, load_labels, load_splits, fold_indices, check_labels, load_masks, cluster_weights
 from .model import DatNet, zero_gamma
@@ -465,7 +466,7 @@ def train_fold(fold, recipe, boxes, y, folds, device, workers=4, out=".", member
     band_w = None
     if recipe.fuse_aux_band > 0:
         import pandas as _pd
-        _g = _pd.read_csv("/home/pbd/PROJETS/DATscan/meta/lomoe_severity.csv").group.values
+        _g = _pd.read_csv(str(_PATHS.META / "lomoe_severity.csv")).group.values
         band_w = torch.tensor(1.0 + recipe.fuse_aux_band * (_g == 1), dtype=torch.float32, device=device)
     sig_cap = {}; sig_fired = [False]; sig_ep = []
     if recipe.sigreg_w > 0:
@@ -487,8 +488,8 @@ def train_fold(fold, recipe, boxes, y, folds, device, workers=4, out=".", member
     if recipe.ccdann_w > 0:
         import pandas as _pd
         model.net.class_layers.flatten.register_forward_hook(lambda m_, i_, o_: ccd_cap.__setitem__("z", o_))
-        _uids = list(_pd.read_csv("/home/pbd/PROJETS/DATscan/meta/uids.csv").iloc[:, 0].astype(str))
-        _am = _pd.read_csv("/home/pbd/PROJETS/DATscan/meta/acq_meta.csv")
+        _uids = list(_pd.read_csv(str(_PATHS.META / "uids.csv")).iloc[:, 0].astype(str))
+        _am = _pd.read_csv(str(_PATHS.META / "acq_meta.csv"))
         _am = _am.set_index(_am.columns[0]).loc[_uids]
         ccd_dom = torch.tensor(_am["cluster"].values, dtype=torch.long, device=device)
         ccd_heads = torch.nn.ModuleList([torch.nn.Linear(1024, 8), torch.nn.Linear(1024, 8)]).to(device)

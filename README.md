@@ -25,6 +25,54 @@ refuted research arms and a superseded pipeline have been left behind. What surv
 
 ---
 
+## Prize package — quick start
+
+Everything in this repository runs from **exactly two inputs**:
+
+| input | env var | content |
+|---|---|---|
+| scans | `DAT_NIFTIS` | a directory of raw scans, `{uid}.nii.gz` |
+| labels | `DAT_LABELS` | the competition csv (`uid,is_pathologic`) |
+
+Derived artifacts (caches, training runs) land under `DAT_WORK` (default
+`./work`); the shipped TorchScript weights live in `./models` (override with
+`DAT_MODELS`). No other data or paths are assumed.
+
+### Setup (fresh machine)
+
+```bash
+conda create -n datscan python=3.12 -y && conda activate datscan
+pip install -r requirements.txt        # exact versions; CUDA 12.8 wheel index included
+export DAT_NIFTIS=/path/to/niftis DAT_LABELS=/path/to/train_labels.csv
+```
+
+### Hardware used
+
+Tesla V100S-PCIE-32GB x3 (any single >=11 GB CUDA GPU works), 24-core CPU,
+252 GB RAM (16 GB is enough for inference), Ubuntu 22.04.
+Training: ~2 h 15 per fold, 50 folds (~12 h wall on 3 GPUs).
+Inference: ~3.4 s/scan cold, well inside the competition's 3 h / 3000-scan budget.
+
+### Inference with the shipped weights (no retraining)
+
+`inference/main.py` is the exact program submitted: point it at any folder of
+`.nii.gz` scans (new data included) and it writes one calibrated probability
+per scan:
+
+```bash
+DATA_DIR=/path/with/niftis OUTPUT_PATH=submission.csv \
+  python inference/main.py     # uses assets/ next to main.py; models/ holds the same files
+```
+
+Inference is deterministic: two runs on the same scans produce
+byte-identical csvs (checked by `build/verify_pkg.sh`).
+
+### Full reproduction from raw data
+
+See [Reproducing](#reproducing) below — cache build, training, TorchScript
+export, calibration, packaging, and the acceptance gate (`tests/run_all.py`).
+
+
 ## The problem
 
 A DaT scan images dopamine transporter density in the striatum. A **normal** study shows two symmetric
@@ -325,11 +373,12 @@ Environment: Python 3.12, PyTorch 2.10, MONAI 1.6 (build-time only — the submi
 and needs just torch, numpy, scipy, nibabel, pandas).
 
 ```bash
+export DAT_NIFTIS=/path/to/niftis DAT_LABELS=/path/to/train_labels.csv
 # 1. caches: nifti -> canonical boxes + striatal masks (about 40 min on one GPU)
-python build/build_canonv2_cache.py --niftis /path/to/niftis --out /path/to/boxcache
+python build/build_canonv2_cache.py            # writes ${DAT_WORK:-work}/boxcache
 
 #    the gate this repo was assembled under -- rebuild a few scans and correlate:
-python build/build_canonv2_cache.py --limit 12 --verify /path/to/boxcache/canonv2.f16.npy
+python build/build_canonv2_cache.py --limit 12 --verify work/boxcache/canonv2.f16.npy
 #    -> VERIFY n=12 | corr: min 1.0000 median 1.0000   PASS
 
 # 2. train (about 2 h 15 per fold; the launcher fills idle GPUs and is restartable)
@@ -347,7 +396,7 @@ python build/calibrate.py --recipe recipes/fusion10_s078.json --runs <runs>
 # 5. package, then verify from a FRESH UNZIP (never from the staging directory)
 python build/build_roster.py --recipe recipes/fusion10_s078.json --assets <assets> \
        --runs <runs> --slope 0.78 --out /path/submission.zip
-bash build/verify_pkg.sh /path/submission.zip
+bash build/verify_pkg.sh /path/submission.zip   # smoke + runtime + BIT-IDENTITY (run twice, sha256)
 
 # 6. gates
 python tests/run_all.py

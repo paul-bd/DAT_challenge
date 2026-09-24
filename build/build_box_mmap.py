@@ -7,7 +7,8 @@ sys.path.insert(0, ".")
 from datprep_iso import normalize
 from datprep_box import extract_box, BOX
 
-OUT = "/ssd/datasets/DAT_SCAN/boxcache"
+from datscan import paths as P
+OUT = str(P.BOXCACHE)
 os.makedirs(OUT, exist_ok=True)
 
 
@@ -29,8 +30,8 @@ if __name__ == "__main__":
     if which in ("comp", "both"):
         uids = pd.read_csv("meta/uids.csv")["uid"].astype(str).tolist()
         C = np.load("meta/head_centers.npy")
-        build("comp", uids, "/ssd/datasets/DAT_SCAN/iso", C)
+        build("comp", uids, str(P.WORK / "iso"), C)
     if which in ("ppmi", "both"):
-        df = pd.read_csv("/ssd/datasets/DAT_SCAN/PPMI/ppmi_labels.csv")
-        C = np.load("/ssd/datasets/DAT_SCAN/PPMI/ppmi_head_centers.npy")
-        build("ppmi", df.hash.astype(str).tolist(), "/ssd/datasets/DAT_SCAN/PPMI/PPMI_iso", C)
+        df = pd.read_csv(str(P.WORK / "PPMI" / "ppmi_labels.csv"))  # optional external cohort
+        C = np.load(str(P.WORK / "PPMI" / "ppmi_head_centers.npy"))
+        build("ppmi", df.hash.astype(str).tolist(), str(P.WORK / "PPMI" / "PPMI_iso"), C)

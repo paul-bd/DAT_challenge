@@ -1,6 +1,6 @@
 """Box-cache reader and fold splits.
 
-The cache `/ssd/datasets/DAT_SCAN/boxcache/comp.f16.npy` is (1362, 128, 128, 92) float16: 2 mm iso RAS,
+The cache `${DAT_WORK}/boxcache/comp.f16.npy` is (1362, 128, 128, 92) float16: 2 mm iso RAS,
 head-cropped, WHOLE-BRAIN-MEAN normalised by `datprep_iso.normalize()` -- the masked mean over voxels
 > 0.15 * p99.9, NOT `b / b.mean()`. Writing the plain mean is the single most expensive mistake this
 project made: it produced a stress harness whose logits correlated 0.58 with the shipped model on
@@ -10,6 +10,7 @@ The cache reproduces normalize() to 0.0019, so nothing is recomputed here. Norma
 axis anyway: a BIGGER reference beats a purer one (striatum/parotid exclusion +0.001, percentiles -0.08).
 """
 import numpy as np
+from . import paths as _PATHS
 import pandas as pd
 import torch
 from monai.data import Dataset
@@ -56,16 +57,18 @@ class BoxDataset(Dataset):
                 aux, np.float32(self.w[r]))
 
 
-def load_boxes(path, box=BOX):
+def load_boxes(path_raw, box=BOX):
+    path = _PATHS.expand(path_raw)
     a = np.load(path, mmap_mode="r")
     if a.shape[1:] != tuple(box):
         raise ValueError(f"cache {path} has box {a.shape[1:]}, expected {tuple(box)}")
     return a
 
 
-def load_masks(path, box=BOX):
+def load_masks(path_raw, box=BOX):
     """3D striatal masks aligned row-for-row with the box cache (ellipse localiser; IoU 1.000 with the
     2D proj_masks after S-I projection)."""
+    path = _PATHS.expand(path_raw)
     a = np.load(path, mmap_mode="r")
     if a.shape[1:] != tuple(box):
         raise ValueError(f"mask cache {path} has box {a.shape[1:]}, expected {tuple(box)}")
