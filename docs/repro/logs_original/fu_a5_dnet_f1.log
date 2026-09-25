@@ -1,0 +1,22 @@
+recipe: densenet121 seed 5 ep 120 ema 0.999 tau 4.09*mu+1.259
+  ARM: {'save_swa': True, 'rot_deg': 31.7, 'sagfuse': 'attnres', 'sagfuse_aug': True, 'sagfuse_aux': 0.3, 'anchor_guard': True, 'ndt_anchor': 'striatal', 'mask3d_cache': '/ssd/datasets/DAT_SCAN/boxcache/canonv2mask_ell.u8.npy', 'lesion_p': 0.25, 'lesion_lo': 0.45, 'lesion_hi': 0.9, 'fuse_lr_mult': 0.3, 'box_cache': '/ssd/datasets/DAT_SCAN/boxcache/canonv2.f16.npy', 'splits': 'meta/cv_round6.csv'}
+  NDT anchor = STRIATAL (one scalar per scan, mask through the image affine, window fallback)
+  weight EMA decay=0.999 (this IS the shipped artifact, not the last weights)
+  COUNTERFACTUAL LESION: p=0.25 sev [0.45,0.9] order_w=0.0 k=8 margin=0.5
+  LESION FIRED: 2 normals relabelled abnormal, 0 ordering pairs, batch 24 -> 24 rows
+  SAGFUSE_AUX FIRED: w=0.3, 2 view logits supervised
+[fu_a5_dnet f1] ep00 val ll 0.6961 auc 0.7084 (best 0.6961@0)
+[fu_a5_dnet f1] ep10 val ll 0.3647 auc 0.9258 (best 0.3161@9)
+[fu_a5_dnet f1] ep20 val ll 0.3671 auc 0.9461 (best 0.2935@13)
+[fu_a5_dnet f1] ep30 val ll 0.2823 auc 0.9499 (best 0.2823@30)
+[fu_a5_dnet f1] ep40 val ll 0.2925 auc 0.9538 (best 0.2750@39)
+[fu_a5_dnet f1] ep50 val ll 0.2878 auc 0.9571 (best 0.2747@43)
+[fu_a5_dnet f1] ep60 val ll 0.2931 auc 0.9598 (best 0.2674@51)
+[fu_a5_dnet f1] ep70 val ll 0.2500 auc 0.9633 (best 0.2472@68)
+[fu_a5_dnet f1] ep80 val ll 0.2541 auc 0.9637 (best 0.2472@68)
+[fu_a5_dnet f1] ep90 val ll 0.2577 auc 0.9621 (best 0.2472@68)
+[fu_a5_dnet f1] ep100 val ll 0.2481 auc 0.9651 (best 0.2464@94)
+[fu_a5_dnet f1] ep110 val ll 0.2508 auc 0.9655 (best 0.2461@102)
+[fu_a5_dnet f1] ep119 val ll 0.2502 auc 0.9642 (best 0.2459@116)
+[fu_a5_dnet f1] EMA checkpoint + BN recal (242 layers)
+[fu_a5_dnet f1] done 54.4 min: ll 0.2591 auc 0.9647

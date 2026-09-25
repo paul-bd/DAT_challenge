@@ -122,6 +122,10 @@ a09db4ebc130dbdfafa5f129ef006d26  fu_a9_dnet_f1.ts.pt
 8ed5ab4ef6d29e5d98894a836a81f212  fu_a9_dnet_f3.ts.pt
 00f2d4479d3dece7f06f4ac5f9e97803  fu_a9_dnet_f4.ts.pt
 
+# The ORIGINAL competition run's training logs (2026-09-05, the run the shipped
+# traces were exported from) are in docs/repro/logs_original/ — same 50
+# member/fold logs, for side-by-side comparison with the retrain.
+
 ## retrained per-fold validation metrics (logs in docs/repro/logs/)
 [fu_a10_dnet f0] done 56.0 min: ll 0.2910 auc 0.9588
 [fu_a10_dnet f1] done 52.5 min: ll 0.2391 auc 0.9763
