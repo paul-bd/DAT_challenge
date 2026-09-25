@@ -39,8 +39,15 @@ The chain:
    workspace); the resulting 1362 npz files exist on disk and are what
    `train_ellipse.py` consumes.
 
-The contours themselves are annotations on competition data and are not
-redistributed (see Licence and data in the top-level README): with the
-competition dataset and these artifacts in `${DAT_WORK}`, the localiser
-retrains end to end; from a bare clone it does not, and cannot — step 4 is
-human work.
+The annotation artifacts are hosted alongside the prize package at
+**https://huggingface.co/paulonium/dat-challenge-winner** (private, same
+access): `ellipse_annotations.tar.gz`, 4.9 MB,
+sha256 `77b4e3b4b99978ecbdee604f881b28215765ddec5062e8bf14b610db52d942fc`
+(verified equal on the local build and the Hub's LFS storage). It contains
+`box_automasks/` (all 1362), `striatal_masks/` (the raw expert contours),
+`striatal_ellipse_sh0.5.pt` (the shipped-lineage checkpoint),
+`head_centers.npy`, `random50_uids.csv` and this README. The scan images are
+NOT in it — masks and annotations only. Unpack `box_automasks/` under
+`${DAT_WORK}` and rebuild `comp.f16.npy` from the niftis with
+`build_box_mmap.py`; then `build/train_ellipse.py` retrains end to end.
+The only unreproducible step is 4 — the annotating itself is human work.

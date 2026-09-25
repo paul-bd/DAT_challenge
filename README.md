@@ -56,6 +56,12 @@ DrivenData handoff copy).
 sha256: `9752e5b3273841b343b73131cf55a038fcffa501899c1b915981802a05e1da65`
 (verified equal on the local build and on the Hub's LFS storage)
 
+The same repo also hosts `ellipse_annotations.tar.gz` (4.9 MB, sha256
+`77b4e3b4b99978ecbdee604f881b28215765ddec5062e8bf14b610db52d942fc`): the expert
+striatal contours, box-space masks and localiser checkpoint needed to retrain
+the ellipse localiser — masks and annotations only, no scan data. See
+`build/provenance_ellipse/README.md`.
+
 ### Inference with the shipped weights (no retraining)
 
 `inference/main.py` is the exact program submitted: point it at any folder of
@@ -558,5 +564,6 @@ and paying more than the saving.
 Code is the authors'. The scan data are not redistributed here and remain under the competition's
 terms. The ellipse localiser shipped in `inference/assets/` was trained on 276 expert-drawn contours
 from this dataset (`build/train_ellipse.py` / `build/export_ellipse.py`; the annotation tooling and
-data chain behind its training set are recorded in `build/provenance_ellipse/`). No external DaT dataset was used for training at any point, as the competition
+data chain behind its training set are recorded in `build/provenance_ellipse/`, and the annotations
+themselves are hosted with the prize package — see [Shipped weights](#shipped-weights--download)). No external DaT dataset was used for training at any point, as the competition
 rules required.
