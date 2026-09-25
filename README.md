@@ -549,5 +549,6 @@ and paying more than the saving.
 
 Code is the authors'. The scan data are not redistributed here and remain under the competition's
 terms. The ellipse localiser shipped in `inference/assets/` was trained on 276 expert-drawn contours
-from this dataset. No external DaT dataset was used for training at any point, as the competition
+from this dataset (`build/train_ellipse.py` / `build/export_ellipse.py`; the annotation tooling and
+data chain behind its training set are recorded in `build/provenance_ellipse/`). No external DaT dataset was used for training at any point, as the competition
 rules required.
