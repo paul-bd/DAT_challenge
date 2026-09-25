@@ -377,6 +377,14 @@ and needs just torch, numpy, scipy, nibabel, pandas).
 
 ```bash
 export DAT_NIFTIS=/path/to/niftis DAT_LABELS=/path/to/train_labels.csv
+# 0. (optional) the ellipse localiser -- the striatal anchor every later stage relies on.
+#    Every result in this repository was produced with the SHIPPED inference/assets/ellipse.ts.pt,
+#    so the default is to skip this step and use it. Retraining needs the expert-annotation
+#    artifacts under ${DAT_WORK} (comp.f16.npy + box_automasks/ -- provenance and their surviving
+#    producers in build/provenance_ellipse/), which do not ship with the repo.
+#python build/train_ellipse.py --shapew 0.5 --learncut --out runs/seg/striatal_ellipse_sh0.5.pt
+#python build/export_ellipse.py   # CPU-trace -> GPU verify on real boxes -> ellipse.ts.pt
+
 # 1. caches: nifti -> canonical boxes + striatal masks (about 40 min on one GPU)
 python build/build_canonv2_cache.py            # writes ${DAT_WORK:-work}/boxcache
 

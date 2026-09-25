@@ -23,7 +23,8 @@ from datscan import paths as P
 sys.path.insert(0, "."); sys.path.insert(0, "monai_pipeline")
 import numpy as np, torch, pandas as pd
 
-src = open("train_ellipse.py").read().split("net = EllipseNet")[0].replace('ap.parse_args()', 'ap.parse_args([])')
+src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "train_ellipse.py")).read() \
+    .split("net = EllipseNet")[0].replace('ap.parse_args()', 'ap.parse_args([])')
 g = {"__name__": "te"}
 exec(compile(src, "train_ellipse.py", "exec"), g)
 EllipseNet = g["EllipseNet"]
