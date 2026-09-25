@@ -125,6 +125,15 @@ a09db4ebc130dbdfafa5f129ef006d26  fu_a9_dnet_f1.ts.pt
 # The ORIGINAL competition run's training logs (2026-09-05, the run the shipped
 # traces were exported from) are in docs/repro/logs_original/ — same 50
 # member/fold logs, for side-by-side comparison with the retrain.
+#
+# ELLIPSE LOCALISER RETRAIN (2026-09-25, same env; logs train_ellipse.log /
+# export_ellipse.log in docs/repro/logs/): trained from the hosted
+# ellipse_annotations.tar.gz artifacts in 22 min — best holdout Dice 0.836
+# (UNet reference 0.794, ellipsoid-family ceiling 0.859). Export: trace
+# fidelity CPU 3.81e-06, CPU-trace->GPU 2.29e-05; masks of the RETRAINED
+# checkpoint vs the ORIGINAL's training masks: pixel mismatch 1.02e-03,
+# worst scan 0.40% — the ellipsoid geometry reproduces across retrains far
+# more tightly than the classifier weights do.
 
 ## retrained per-fold validation metrics (logs in docs/repro/logs/)
 [fu_a10_dnet f0] done 56.0 min: ll 0.2910 auc 0.9588

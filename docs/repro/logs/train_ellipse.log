@@ -1,0 +1,20 @@
+HOLDOUT: 25 of the 50 UNBIASED random-sample scans (rest train)
+train 251 scans (251 expert) | holdout 25
+METRICS TO BEAT (honest 30-scan holdout, UNet voxel segmenter): Dice 0.794, centre err 0.60mm median / 2.85mm p90 | ellipsoid-family ceiling Dice 0.859
+moment-ellipsoid targets: 551 sides
+[ell ep000] alpha_base 0.496 holdout Dice 0.796  centre 1.07mm / p90 2.88mm  (loss 0.285, 0 min) *
+[ell ep010] alpha_base 0.496 holdout Dice 0.815  centre 0.88mm / p90 2.08mm  (loss 0.259, 2 min) *
+[ell ep020] alpha_base 0.495 holdout Dice 0.812  centre 1.13mm / p90 2.88mm  (loss 0.199, 4 min)
+[ell ep030] alpha_base 0.495 holdout Dice 0.798  centre 1.21mm / p90 3.19mm  (loss 0.185, 6 min)
+[ell ep040] alpha_base 0.495 holdout Dice 0.834  centre 0.83mm / p90 2.20mm  (loss 0.325, 8 min) *
+[ell ep050] alpha_base 0.494 holdout Dice 0.832  centre 0.64mm / p90 2.02mm  (loss 0.324, 9 min)
+[ell ep060] alpha_base 0.494 holdout Dice 0.830  centre 0.70mm / p90 1.60mm  (loss 0.246, 11 min)
+[ell ep070] alpha_base 0.494 holdout Dice 0.836  centre 0.74mm / p90 1.69mm  (loss 0.236, 13 min) *
+[ell ep080] alpha_base 0.494 holdout Dice 0.834  centre 0.78mm / p90 1.93mm  (loss 0.223, 15 min)
+[ell ep090] alpha_base 0.494 holdout Dice 0.826  centre 0.75mm / p90 1.62mm  (loss 0.206, 17 min)
+[ell ep100] alpha_base 0.494 holdout Dice 0.833  centre 0.68mm / p90 1.67mm  (loss 0.209, 18 min)
+[ell ep110] alpha_base 0.493 holdout Dice 0.832  centre 0.72mm / p90 1.50mm  (loss 0.282, 20 min)
+[ell ep119] alpha_base 0.493 holdout Dice 0.833  centre 0.71mm / p90 1.55mm  (loss 0.208, 22 min)
+
+BEST holdout Dice 0.836  -> runs/seg/striatal_ellipse_sh0.5.pt
+reference: UNet 0.794 | ellipsoid-family ceiling 0.859

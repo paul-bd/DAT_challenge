@@ -1,2 +1,5 @@
 logs/*.log
 hf_token.secret
+runs/
+submission_gen160/
+meta/proj_masks.npy

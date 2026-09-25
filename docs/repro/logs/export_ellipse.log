@@ -1,0 +1,13 @@
+HOLDOUT: 25 of the 50 UNBIASED random-sample scans (rest train)
+train 251 scans (251 expert) | holdout 25
+METRICS TO BEAT (honest 30-scan holdout, UNet voxel segmenter): Dice 0.794, centre err 0.60mm median / 2.85mm p90 | ellipsoid-family ceiling Dice 0.859
+trace fidelity: CPU 3.81e-06   CPU-trace->GPU-run 2.29e-05
+  0/1362
+  400/1362
+  800/1362
+  1200/1362
+
+MASK PARITY vs training (all 1362 scans):
+  pixel mismatch rate 1.02e-03   scans over 0.1% mismatch: 560   worst scan 0.3967%
+  (small nonzero is expected: training masks came through the SOFT render at tau=0.05;
+   the hard q<1 test differs only in the sigmoid's transition pixels)
