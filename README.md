@@ -414,6 +414,29 @@ Inference, which is what the submission runs:
 DATA_DIR=/path/with/niftis OUTPUT_PATH=/tmp/submission.csv python inference/main.py
 ```
 
+### What reproduces bit-exactly, and what does not
+
+A full retrain was run on 2026-09-25 in a fresh environment (`requirements.txt` pins, 3× V100S);
+the record — md5 manifest, all 50 training logs, calibration — is in `docs/repro/`. The outcome
+draws the line precisely:
+
+| stage | bit-exact? | evidence |
+|---|---|---|
+| cache build, augmentation, inference | **yes** | cache verify corr 1.0000; T2 40/40 seeds; T3 diff 0.000e+00 |
+| GPU training | **no** — functionally equivalent | retrained OOF ll **0.2065** vs the package's 0.2067; weights correlate ~0.95–0.97 |
+
+Do not expect retrained weights to checksum-match the shipped ones, and do not read a mismatch as
+a defect. Floating-point addition is not associative, and a GPU accumulates gradients with
+`atomicAdd` in whatever order its threads reach memory — the same op on the same data gives a
+different last bit run to run (cuDNN's runtime algorithm benchmarking adds more). Training
+amplifies that ~1e-8 seed of divergence over 120 epochs into weights that land on a *different,
+equally good* minimum: predictions agree to 0.0002 log loss while the bytes agree not at all.
+The seed fixes which numbers go in (hence T2 passes bit-exactly); it cannot fix the order the
+hardware sums them. This is why every gate in `tests/` is defined functionally, not by checksum.
+`torch.use_deterministic_algorithms(True)` + `cudnn.benchmark=False` would make two runs on one
+machine and one library stack identical, at some speed cost — it still would not match weights
+trained under a different stack.
+
 ---
 
 ## Layout
